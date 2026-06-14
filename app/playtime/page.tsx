@@ -44,7 +44,7 @@ function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: num
           <span className={`text-xs font-mono px-1 rounded ${platformColor}`}>{game.platform}</span>
           <span className={`text-xs px-1.5 py-0.5 rounded-full border ${statusColor}`}>{STATUS_LABELS[game.status]}</span>
           {game.lastPlayed && (
-            <span className="text-xs text-zinc-600">
+            <span className="hidden sm:inline text-xs text-zinc-600">
               last played {new Date(game.lastPlayed).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
             </span>
           )}
@@ -52,8 +52,10 @@ function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: num
       </div>
 
       {/* Bar + time */}
-      <div className="flex items-center gap-3 w-48 shrink-0">
-        <BarChart value={game.playtime} max={maxPlaytime} />
+      <div className="flex items-center gap-3 shrink-0 sm:w-48">
+        <div className="hidden sm:block flex-1">
+          <BarChart value={game.playtime} max={maxPlaytime} />
+        </div>
         <span className="text-sm font-mono text-zinc-300 w-14 text-right">{formatPlaytime(game.playtime)}</span>
       </div>
     </a>
@@ -67,7 +69,7 @@ function TotalStats({ games }: { games: Game[] }) {
   const avgMins = played.length ? Math.floor(totalMins / played.length) : 0;
 
   return (
-    <div className="grid grid-cols-4 gap-3 mb-8">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
       {[
         { label: "Total play time", value: `${totalHours}h` },
         { label: "Played titles", value: played.length },
@@ -156,7 +158,7 @@ export default function PlaytimePage() {
       {!loading && <TotalStats games={games} />}
 
       {/* Sort controls */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 flex-wrap justify-between sm:justify-start">
         <span className="text-xs text-zinc-600">Sort:</span>
         <SortBtn k="playtime" label="Play time" />
         <SortBtn k="title" label="Name" />

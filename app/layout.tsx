@@ -15,31 +15,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
       <body className="antialiased bg-zinc-950 text-zinc-100 min-h-screen">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <header className="mb-10 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-3 group">
-              <span className="text-3xl">🎮</span>
-              <div>
-                <h1 className="text-xl font-semibold leading-tight text-zinc-100 group-hover:text-white transition-colors">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+          <header className="mb-8 sm:mb-10 flex items-center justify-between gap-3">
+            <a href="/" className="flex items-center gap-2.5 group min-w-0">
+              <span className="text-2xl sm:text-3xl shrink-0">🎮</span>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-semibold leading-tight text-zinc-100 group-hover:text-white transition-colors truncate">
                   Game Boy Collection
                 </h1>
-                <p className="text-xs text-zinc-500 mt-0.5">Analog Pocket · GB · GBC · GBA</p>
+                <p className="text-xs text-zinc-500 mt-0.5 hidden sm:block">Analog Pocket · GB · GBC · GBA</p>
               </div>
             </a>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <AuthButton />
               <a
                 href="/playtime"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                className="px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
               >
-                ⏱ Play Time
+                <span className="sm:hidden">⏱</span>
+                <span className="hidden sm:inline">⏱ Play Time</span>
               </a>
               <a
                 href="/games/new"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors border border-zinc-700"
+                className="flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors border border-zinc-700"
               >
                 <span>+</span>
-                <span>Add game</span>
+                <span className="hidden sm:inline">Add game</span>
               </a>
             </div>
           </header>

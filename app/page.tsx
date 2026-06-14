@@ -98,7 +98,7 @@ function StatsBar({ games, statusFilter, onFilter }: { games: Game[]; statusFilt
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-3 mb-8">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
       {tiles.map((stat) => {
         const clickable = stat.filter !== null;
         const active = clickable && statusFilter === stat.filter && stat.filter !== "";
@@ -158,8 +158,8 @@ export default function HomePage() {
     <div>
       <StatsBar games={allGames} statusFilter={statusFilter} onFilter={setStatusFilter} />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 mb-8">
+        <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">🔍</span>
           <input
             type="text"
@@ -169,46 +169,48 @@ export default function HomePage() {
             className="w-full pl-9 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 focus:bg-zinc-800/60 transition-colors"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
-        <select
-          value={platformFilter}
-          onChange={(e) => setPlatformFilter(e.target.value)}
-          className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
-        >
-          <option value="">All systems</option>
-          {PLATFORMS.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <button
-              key={s}
-              onClick={() => setRatingFilter(ratingFilter === s ? 0 : s)}
-              className={`text-base transition-colors ${s <= ratingFilter ? "text-amber-400" : "text-zinc-700 hover:text-zinc-500"}`}
-              title={`At least ${s} star${s > 1 ? "s" : ""}`}
-            >★</button>
-          ))}
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="flex-1 min-w-[130px] px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+          <select
+            value={platformFilter}
+            onChange={(e) => setPlatformFilter(e.target.value)}
+            className="flex-1 min-w-[120px] px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
+          >
+            <option value="">All systems</option>
+            {PLATFORMS.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <button
+                key={s}
+                onClick={() => setRatingFilter(ratingFilter === s ? 0 : s)}
+                className={`text-base transition-colors ${s <= ratingFilter ? "text-amber-400" : "text-zinc-700 hover:text-zinc-500"}`}
+                title={`At least ${s} star${s > 1 ? "s" : ""}`}
+              >★</button>
+            ))}
+          </div>
+          <button
+            onClick={() => setLentFilter((v) => !v)}
+            className={`px-3 py-2 rounded-lg text-sm border transition-all whitespace-nowrap ${
+              lentFilter
+                ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
+                : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+            }`}
+          >
+            Lent out
+          </button>
         </div>
-        <button
-          onClick={() => setLentFilter((v) => !v)}
-          className={`px-3 py-2.5 rounded-lg text-sm border transition-all whitespace-nowrap ${
-            lentFilter
-              ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
-              : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
-          }`}
-        >
-          Lent out
-        </button>
       </div>
 
       {!loading && (

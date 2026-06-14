@@ -228,9 +228,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
       ) : (
         /* ── VIEW MODE ── */
         <>
-          <div className="flex gap-8 mb-8">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
             {/* Image area */}
-            <div className="w-40 shrink-0">
+            <div className="w-full sm:w-40 sm:shrink-0 max-w-[180px] mx-auto sm:mx-0">
               <div className={`bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center ${
                 isLibraryImg ? "aspect-[160/144]" : "aspect-[3/4]"
               }`}>
@@ -338,7 +338,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
             <StatBox label="Play time" value={formatPlaytime(game.playtime)} />
             <StatBox label="Sessions" value={game.sessions} />
             <StatBox label="Last played"
