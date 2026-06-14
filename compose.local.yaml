@@ -1,0 +1,21 @@
+services:
+  gameboy-collection:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # App-Daten
+      - ./data:/app/data
+
+      # Demo-Daten (lokaler Entwicklungsordner)
+      - ./demodata/library:/library:ro            # Library/Images/GB|GBA|GBC/*.bin
+      - ./demodata/playedgames:/playedgames:ro    # list.bin + playtimes.bin
+      # Optional: ROM-Sammlung für Titelzuordnung aller Library-Bilder
+      # - /pfad/zu/roms:/roms:ro
+    environment:
+      - NODE_ENV=production
+      - ADMIN_PASSWORD=linux666
+      - POCKET_LIBRARY_DIR=/library
+      - POCKET_PLAYED_DIR=/playedgames
+      # - ROMS_DIR=/roms
+    restart: unless-stopped
