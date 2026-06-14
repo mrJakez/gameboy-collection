@@ -28,7 +28,7 @@ export function createGame(data: Omit<Game, "id">): Game {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   const id = games.find((g) => g.id === base) ? `${base}-${Date.now()}` : base;
-  const game: Game = { lent: false, ...data, id };
+  const game: Game = { ...data, lent: data.lent ?? false, id };
   games.push(game);
   writeGames(games);
   return game;
