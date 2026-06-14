@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthButton from "@/app/components/AuthButton";
+import GameBoyIcon from "@/app/components/GameBoyIcon";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -18,12 +19,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
           <header className="mb-8 sm:mb-10 flex items-center justify-between gap-3">
             <a href="/" className="flex items-center gap-2.5 group min-w-0">
-              <span className="text-2xl sm:text-3xl shrink-0">🎮</span>
-              <div className="min-w-0">
-                <h1 className="text-base sm:text-xl font-semibold leading-tight text-zinc-100 group-hover:text-white transition-colors truncate">
+              <GameBoyIcon className="w-8 h-8 sm:w-10 sm:h-10 shrink-0" />
+              <div className="min-w-0 hidden sm:block">
+                <h1 className="text-xl font-semibold leading-tight text-zinc-100 group-hover:text-white transition-colors truncate">
                   Game Boy Collection
                 </h1>
-                <p className="text-xs text-zinc-500 mt-0.5 hidden sm:block">Analog Pocket · GB · GBC · GBA</p>
+                <p className="text-xs text-zinc-500 mt-0.5">Analog Pocket · GB · GBC · GBA</p>
               </div>
             </a>
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
