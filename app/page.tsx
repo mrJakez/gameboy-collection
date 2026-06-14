@@ -53,7 +53,7 @@ function GameCard({ game }: { game: Game }) {
           </span>
           {game.lent ? (
             <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-xs border bg-orange-500/20 text-orange-300 border-orange-500/40">
-              Ausgeliehen
+              Lent out
             </span>
           ) : (
             <span className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-xs border ${statusColor}`}>
@@ -91,10 +91,10 @@ function StatsBar({ games, statusFilter, onFilter }: { games: Game[]; statusFilt
   const totalHours = Math.floor(games.reduce((s, g) => s + g.playtime, 0) / 60);
 
   const tiles = [
-    { label: "Gesamt", value: games.length, sub: "Spiele", filter: "" },
-    { label: "Aktiv", value: playing, sub: "gerade gespielt", filter: "playing" },
-    { label: "Durchgespielt", value: completed, sub: "abgeschlossen", filter: "completed" },
-    { label: "Spielzeit", value: `${totalHours}h`, sub: "insgesamt", filter: null },
+    { label: "Total", value: games.length, sub: "games", filter: "" },
+    { label: "Playing", value: playing, sub: "currently playing", filter: "playing" },
+    { label: "Completed", value: completed, sub: "finished", filter: "completed" },
+    { label: "Play time", value: `${totalHours}h`, sub: "total", filter: null },
   ];
 
   return (
@@ -163,7 +163,7 @@ export default function HomePage() {
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">🔍</span>
           <input
             type="text"
-            placeholder="Spiel, Publisher oder Genre suchen…"
+            placeholder="Search game, publisher or genre…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 focus:bg-zinc-800/60 transition-colors"
@@ -174,7 +174,7 @@ export default function HomePage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
         >
-          <option value="">Alle Status</option>
+          <option value="">All statuses</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
           ))}
@@ -184,7 +184,7 @@ export default function HomePage() {
           onChange={(e) => setPlatformFilter(e.target.value)}
           className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
         >
-          <option value="">Alle Systeme</option>
+          <option value="">All systems</option>
           {PLATFORMS.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
@@ -195,7 +195,7 @@ export default function HomePage() {
               key={s}
               onClick={() => setRatingFilter(ratingFilter === s ? 0 : s)}
               className={`text-base transition-colors ${s <= ratingFilter ? "text-amber-400" : "text-zinc-700 hover:text-zinc-500"}`}
-              title={`Mindestens ${s} Stern${s > 1 ? "e" : ""}`}
+              title={`At least ${s} star${s > 1 ? "s" : ""}`}
             >★</button>
           ))}
         </div>
@@ -207,14 +207,14 @@ export default function HomePage() {
               : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
           }`}
         >
-          Ausgeliehen
+          Lent out
         </button>
       </div>
 
       {!loading && (
         <p className="text-xs text-zinc-600 mb-4">
-          {filtered.length} {filtered.length === 1 ? "Spiel" : "Spiele"}
-          {(query || statusFilter || platformFilter || ratingFilter > 0) && " gefunden"}
+          {filtered.length} {filtered.length === 1 ? "game" : "games"}
+          {(query || statusFilter || platformFilter || ratingFilter > 0) && " found"}
         </p>
       )}
 
@@ -233,10 +233,10 @@ export default function HomePage() {
       ) : games.length === 0 ? (
         <div className="text-center py-20 text-zinc-600">
           <p className="text-4xl mb-3">🎮</p>
-          <p className="text-sm">Keine Spiele gefunden.</p>
+          <p className="text-sm">No games found.</p>
           {!query && !statusFilter && !platformFilter && (
             <a href="/games/new" className="mt-4 inline-block text-xs text-zinc-400 hover:text-zinc-200 underline">
-              Erstes Spiel hinzufügen
+              Add your first game
             </a>
           )}
         </div>

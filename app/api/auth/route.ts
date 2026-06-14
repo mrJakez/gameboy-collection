@@ -27,7 +27,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { password } = await req.json();
   if (!isCorrectPassword(password)) {
-    return NextResponse.json({ error: "Falsches Passwort" }, { status: 401 });
+    return NextResponse.json({ error: "Wrong password" }, { status: 401 });
   }
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE, process.env.ADMIN_PASSWORD!, {

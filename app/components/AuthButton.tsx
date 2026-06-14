@@ -27,7 +27,7 @@ export default function AuthButton() {
       setPassword("");
       window.location.reload();
     } else {
-      setError("Falsches Passwort");
+      setError("Wrong password");
     }
   }
 
@@ -62,7 +62,7 @@ export default function AuthButton() {
             <h2 className="text-sm font-semibold text-zinc-100">Admin Login</h2>
             <input
               type="password"
-              placeholder="Passwort"
+              placeholder="Password"
               value={password}
               autoFocus
               onChange={(e) => setPassword(e.target.value)}
@@ -76,13 +76,13 @@ export default function AuthButton() {
                 disabled={loading || !password}
                 className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 text-sm text-zinc-100 rounded-lg transition-colors"
               >
-                {loading ? "…" : "Anmelden"}
+                {loading ? "…" : "Sign in"}
               </button>
               <button
                 onClick={() => { setShowModal(false); setPassword(""); setError(""); }}
                 className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
               >
-                Abbrechen
+                Cancel
               </button>
             </div>
           </div>

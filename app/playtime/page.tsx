@@ -45,7 +45,7 @@ function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: num
           <span className={`text-xs px-1.5 py-0.5 rounded-full border ${statusColor}`}>{STATUS_LABELS[game.status]}</span>
           {game.lastPlayed && (
             <span className="text-xs text-zinc-600">
-              zuletzt {new Date(game.lastPlayed).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+              last played {new Date(game.lastPlayed).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
             </span>
           )}
         </div>
@@ -69,10 +69,10 @@ function TotalStats({ games }: { games: Game[] }) {
   return (
     <div className="grid grid-cols-4 gap-3 mb-8">
       {[
-        { label: "Gesamtspielzeit", value: `${totalHours}h` },
-        { label: "Gespielte Titel", value: played.length },
-        { label: "Ø pro Spiel", value: formatPlaytime(avgMins) },
-        { label: "Unvergessen", value: games.filter((g) => g.playtime >= 600).length + " Titel" },
+        { label: "Total play time", value: `${totalHours}h` },
+        { label: "Played titles", value: played.length },
+        { label: "Avg per game", value: formatPlaytime(avgMins) },
+        { label: "10h+ games", value: games.filter((g) => g.playtime >= 600).length + " titles" },
       ].map((s) => (
         <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
           <div className="text-2xl font-bold text-zinc-100">{s.value}</div>
@@ -145,11 +145,11 @@ export default function PlaytimePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-zinc-100">Spielzeit</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Alle Titel sortiert nach Zeit auf dem Analog Pocket</p>
+          <h2 className="text-xl font-bold text-zinc-100">Play Time</h2>
+          <p className="text-xs text-zinc-500 mt-0.5">All titles sorted by time on the Analog Pocket</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Sammlung</a>
+          <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Collection</a>
         </div>
       </div>
 
@@ -157,10 +157,10 @@ export default function PlaytimePage() {
 
       {/* Sort controls */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <span className="text-xs text-zinc-600">Sortieren:</span>
-        <SortBtn k="playtime" label="Spielzeit" />
+        <span className="text-xs text-zinc-600">Sort:</span>
+        <SortBtn k="playtime" label="Play time" />
         <SortBtn k="title" label="Name" />
-        <SortBtn k="lastPlayed" label="Zuletzt gespielt" />
+        <SortBtn k="lastPlayed" label="Last played" />
         <SortBtn k="platform" label="System" />
         <div className="ml-auto">
           <button
@@ -171,7 +171,7 @@ export default function PlaytimePage() {
                 : "border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
             }`}
           >
-            Durchgespielt {hideCompleted ? "einblenden" : "ausblenden"}
+            {hideCompleted ? "Show completed" : "Hide completed"}
           </button>
         </div>
       </div>
@@ -185,8 +185,8 @@ export default function PlaytimePage() {
       ) : sorted.length === 0 ? (
         <div className="text-center py-20 text-zinc-600">
           <p className="text-4xl mb-3">⏱</p>
-          <p className="text-sm">Noch keine Spielzeit erfasst.</p>
-          <p className="text-xs mt-2">Importiere deine Analog Pocket Daten.</p>
+          <p className="text-sm">No play time recorded yet.</p>
+          <p className="text-xs mt-2">Import your Analog Pocket data.</p>
         </div>
       ) : (
         <div className="space-y-2">

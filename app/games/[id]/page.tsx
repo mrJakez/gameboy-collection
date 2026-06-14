@@ -127,7 +127,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function deleteGame() {
-    if (!confirm(`"${game?.title}" wirklich löschen?`)) return;
+    if (!confirm(`Really delete "${game?.title}"?`)) return;
     await fetch(`/api/games/${id}`, { method: "DELETE" });
     router.push("/");
   }
@@ -145,8 +145,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="text-center py-20 text-zinc-600">
         <p className="text-4xl mb-3">❓</p>
-        <p>Spiel nicht gefunden.</p>
-        <a href="/" className="text-xs text-zinc-400 underline mt-2 inline-block">Zurück zur Übersicht</a>
+        <p>Game not found.</p>
+        <a href="/" className="text-xs text-zinc-400 underline mt-2 inline-block">Back to overview</a>
       </div>
     );
   }
@@ -160,14 +160,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <a href={backHref} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-          ← Zurück
+          ← Back
         </a>
         {!editing && authenticated && (
           <button
             onClick={startEdit}
             className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs text-zinc-300 rounded-lg transition-colors"
           >
-            Bearbeiten
+            Edit
           </button>
         )}
       </div>
@@ -175,9 +175,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
       {editing ? (
         /* ── EDIT MODE ── */
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-zinc-100">Spiel bearbeiten</h2>
+          <h2 className="text-lg font-bold text-zinc-100">Edit Game</h2>
 
-          <Field label="Titel *">
+          <Field label="Title *">
             <input type="text" value={form.title ?? ""} onChange={(e) => set("title", e.target.value)} className={inputCls} />
           </Field>
 
@@ -191,11 +191,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Jahr">
+            <Field label="Year">
               <input type="number" value={form.year ?? 0} min={1989} max={2010}
                 onChange={(e) => set("year", parseInt(e.target.value))} className={inputCls} />
             </Field>
-            <Field label="System">
+            <Field label="System" >
               <select value={form.platform ?? "GB"} onChange={(e) => set("platform", e.target.value)}
                 className={inputCls}>
                 {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -203,13 +203,13 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </Field>
           </div>
 
-          <Field label="Ausgegeben">
+          <Field label="Spent">
             <input type="text" value={(form.purchasePrice as string) ?? ""}
               onChange={(e) => set("purchasePrice", e.target.value)}
-              placeholder="z.B. 12.50€" className={inputCls} />
+              placeholder="e.g. €12.50" className={inputCls} />
           </Field>
 
-          <Field label="Notizen">
+          <Field label="Notes">
             <textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)}
               rows={3} className={`${inputCls} resize-none`} />
           </Field>
@@ -217,11 +217,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex gap-2 pt-2">
             <button onClick={saveEdit} disabled={saving || !form.title}
               className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 text-sm text-zinc-100 rounded-lg transition-colors">
-              {saving ? "Speichern…" : "Speichern"}
+              {saving ? "Saving…" : "Save"}
             </button>
             <button onClick={() => setEditing(false)}
               className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
-              Abbrechen
+              Cancel
             </button>
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               {authenticated && <div className="mt-2 flex flex-col items-center gap-1">
                 <label className="block text-center cursor-pointer">
                   <span className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
-                    {game.cartridgeImage ? "Bild ersetzen" : "Foto hochladen"}
+                    {game.cartridgeImage ? "Replace photo" : "Upload photo"}
                   </span>
                   <input type="file" accept="image/*" className="hidden"
                     onChange={async (e) => {
@@ -272,7 +272,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 {game.cartridgeImage && (
                   <button onClick={deleteCartridgeImage}
                     className="text-xs text-red-700 hover:text-red-500 transition-colors">
-                    Foto löschen
+                    Delete photo
                   </button>
                 )}
               </div>}
@@ -294,19 +294,19 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               <div className="text-sm text-zinc-400 space-y-0.5">
                 {game.developer && <p><span className="text-zinc-600">Developer</span>{" "}{game.developer}</p>}
                 {game.publisher && <p><span className="text-zinc-600">Publisher</span>{" "}{game.publisher}</p>}
-                {game.year > 0 && <p><span className="text-zinc-600">Jahr</span>{" "}{game.year}</p>}
+                {game.year > 0 && <p><span className="text-zinc-600">Year</span>{" "}{game.year}</p>}
                 {game.genre.length > 0 && <p><span className="text-zinc-600">Genre</span>{" "}{game.genre.join(", ")}</p>}
-                {game.purchasePrice && <p><span className="text-zinc-600">Ausgegeben</span>{" "}{game.purchasePrice}</p>}
+                {game.purchasePrice && <p><span className="text-zinc-600">Spent</span>{" "}{game.purchasePrice}</p>}
               </div>
 
               <div>
-                <p className="text-xs text-zinc-600 mb-1">Bewertung</p>
+                <p className="text-xs text-zinc-600 mb-1">Rating</p>
                 <StarRatingInput value={game.rating} onChange={(v) => patch({ rating: v })} />
               </div>
 
               {authenticated && OWNED_STATUSES.includes(game.status) && (
                 <div>
-                  <p className="text-xs text-zinc-600 mb-1">Ausgeliehen</p>
+                  <p className="text-xs text-zinc-600 mb-1">Lent out</p>
                   <button
                     onClick={() => patch({ lent: !game.lent })}
                     className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
@@ -315,13 +315,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                         : "border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
                     }`}
                   >
-                    {game.lent ? "Ja — als zurück markieren" : "Nein — als ausgeliehen markieren"}
+                    {game.lent ? "Yes — mark as returned" : "No — mark as lent out"}
                   </button>
                 </div>
               )}
 
               <div>
                 <p className="text-xs text-zinc-600 mb-1">Status</p>
+
                 <div className="flex flex-wrap gap-1.5">
                   {STATUSES.map((s) => (
                     <button key={s} onClick={() => patch({ status: s })}
@@ -338,17 +339,17 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <StatBox label="Spielzeit" value={formatPlaytime(game.playtime)} />
+            <StatBox label="Play time" value={formatPlaytime(game.playtime)} />
             <StatBox label="Sessions" value={game.sessions} />
-            <StatBox label="Zuletzt gespielt"
+            <StatBox label="Last played"
               value={game.lastPlayed ? (() => { const d = new Date(game.lastPlayed!); return `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`; })() : "—"} />
           </div>
 
           {/* Notes */}
           <div className="mb-8">
-            <h2 className="text-sm font-semibold text-zinc-300 mb-2">Notizen</h2>
+            <h2 className="text-sm font-semibold text-zinc-300 mb-2">Notes</h2>
             <p className="text-sm text-zinc-400 whitespace-pre-wrap bg-zinc-900 border border-zinc-800 rounded-xl p-4 min-h-16">
-              {game.notes || <span className="text-zinc-700">Keine Notizen</span>}
+              {game.notes || <span className="text-zinc-700">No notes</span>}
             </p>
           </div>
 
@@ -356,7 +357,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           {authenticated && (
             <div className="border-t border-zinc-800 pt-6">
               <button onClick={deleteGame} className="text-xs text-red-600 hover:text-red-400 transition-colors">
-                Spiel löschen
+                Delete game
               </button>
             </div>
           )}

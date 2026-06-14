@@ -50,10 +50,10 @@ export function impliesOwnership(status: GameStatus): boolean {
 }
 
 export const STATUS_LABELS: Record<GameStatus, string> = {
-  playing: "Spiele ich",
-  completed: "Durchgespielt",
-  wishlist: "Wunschliste",
-  backlog: "Besitze ich",
+  playing: "Playing",
+  completed: "Completed",
+  wishlist: "Wishlist",
+  backlog: "Owned",
 };
 
 export const PLATFORM_COLORS: Record<Platform, string> = {

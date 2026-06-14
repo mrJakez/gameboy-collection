@@ -1,164 +1,164 @@
 # 🎮 Game Boy Collection
 
-Eine selbst gehostete Web-App zur Verwaltung deiner Game Boy Sammlung – mit direkter Integration des **Analog Pocket**. Spielzeiten, Cover-Bilder und Spielstände werden automatisch von der SD-Karte eingelesen.
+A self-hosted web app to manage your Game Boy cartridge collection — with direct integration of the **Analog Pocket**. Play times, cover art and session data are automatically imported from the SD card.
 
-> Gebaut mit Next.js · TypeScript · Tailwind CSS · Docker
+> Built with Next.js · TypeScript · Tailwind CSS · Docker
 
 ---
 
 ## Screenshots
 
-### Spielübersicht
-![Spielübersicht](docs/screenshots/overview.png)
+### Game Overview
+![Game Overview](docs/screenshots/overview.png)
 
-Die Hauptansicht zeigt alle Spiele als Kacheln mit Cover-Bild (automatisch aus der Analog Pocket Library), Status-Badge, Bewertung und Spielzeit. Über die Statistik-Tiles oben lässt sich direkt nach Status filtern.
+The main view shows all games as cards with cover art (automatically pulled from the Analog Pocket library), status badge, star rating and play time. Clicking the stat tiles at the top filters the list instantly.
 
-### Spieldetails
-![Spieldetails](docs/screenshots/detail.png)
+### Game Detail
+![Game Detail](docs/screenshots/detail.png)
 
-Die Detailseite zeigt Spielzeit, Sessions, zuletzt gespielt und Notizen. Im eingeloggten Modus können alle Felder bearbeitet, ein eigenes Cartridge-Foto hochgeladen und der Ausgeliehen-Status gesetzt werden.
+The detail page shows play time, sessions, last played date and notes. When logged in, all fields can be edited, a custom cartridge photo can be uploaded and the "lent out" flag can be toggled.
 
-### Spielzeit-Ranking
-![Spielzeit](docs/screenshots/playtime.png)
+### Play Time Ranking
+![Play Time](docs/screenshots/playtime.png)
 
-Eine sortierbare Rangliste aller gespielten Titel mit Balkendiagramm, Gesamt- und Durchschnittsspielzeit.
+A sortable leaderboard of all played titles with bar chart, total and average play time.
 
 ---
 
 ## Features
 
-- **Automatischer Import** von der Analog Pocket SD-Karte
-  - Spielzeiten und Sessions aus `list.bin` / `playtimes.bin`
-  - Cover-Bilder aus der Library (GB · GBC · GBA)
-  - Titel-Zuordnung via No-Intro Datenbank (~8 400 Einträge)
-- **Spielverwaltung**
-  - Status: Spiele ich · Durchgespielt · Besitze ich · Wunschliste
-  - Bewertung (1–5 Sterne)
-  - Notizen, Kaufpreis, Ausgeliehen-Flag
-  - Eigenes Cartridge-Foto hochladbar
-- **Filterung & Suche**
-  - Freitext-Suche (Titel, Publisher, Genre)
-  - Filter nach Status, System, Mindest-Bewertung, Ausgeliehen
-  - Klickbare Statistik-Tiles als Schnellfilter
-- **Spielzeit-Ansicht** mit Ranking, Sortierung und "Durchgespielt ausblenden"
-- **Passwortschutz** – Lesen immer öffentlich, Bearbeiten nur nach Login
-- **Docker-ready** – ein einziger `docker compose up`
+- **Automatic import** from the Analog Pocket SD card
+  - Play times and sessions from `list.bin` / `playtimes.bin`
+  - Cover art from the Library (GB · GBC · GBA)
+  - Title matching via No-Intro database (~8,400 entries)
+- **Game management**
+  - Status: Playing · Completed · Owned · Wishlist
+  - Star rating (1–5)
+  - Notes, purchase price, lent-out flag
+  - Custom cartridge photo upload
+- **Filtering & search**
+  - Full-text search (title, publisher, genre)
+  - Filter by status, platform, minimum rating, lent-out
+  - Clickable stat tiles as quick filters
+- **Play time view** with ranking, sorting and "hide completed" toggle
+- **Password protection** — reading is always public, editing requires login
+- **Docker-ready** — a single `docker compose up`
 
 ---
 
-## Voraussetzungen
+## Requirements
 
 - Docker & Docker Compose
-- Eine **Analog Pocket** SD-Karte (oder Demo-Daten, s. u.)
+- An **Analog Pocket** SD card (or demo data, see below)
 
 ---
 
 ## Setup
 
-### 1. Repository klonen
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/dein-user/gameboy-collection.git
+git clone https://github.com/your-user/gameboy-collection.git
 cd gameboy-collection
 ```
 
-### 2. Ordnerstruktur anlegen
+### 2. Folder structure
 
 ```
 gameboy-collection/
-├── data/                  ← von der App geschrieben (wird angelegt)
-│   ├── games.json         ← Spieledatenbank
-│   ├── library/           ← konvertierte Cover-PNGs
-│   └── cartridges/        ← hochgeladene Cartridge-Fotos
+├── data/                  ← written by the app (created automatically)
+│   ├── games.json         ← game database
+│   ├── library/           ← converted cover PNGs
+│   └── cartridges/        ← uploaded cartridge photos
 │
-├── demodata/              ← nur für lokale Tests ohne echte SD-Karte
+├── demodata/              ← for local testing without a real SD card
 │   ├── library/           ← Library/Images/GB|GBC|GBA/*.bin
 │   └── playedgames/       ← list.bin + playtimes.bin
 │
 └── compose.local.yaml
 ```
 
-> **`data/`** wird vollständig von der App verwaltet. Diesen Ordner regelmäßig sichern.
+> **`data/`** is fully managed by the app. Back this folder up regularly.
 
-### 3. SD-Karte einbinden
+### 3. Mount your SD card
 
-Öffne `compose.local.yaml` und passe die Volume-Pfade an:
+Open `compose.local.yaml` and adjust the volume paths:
 
 ```yaml
 volumes:
-  - ./data:/app/data                           # App-Daten (Pflicht)
+  - ./data:/app/data                           # app data (required)
   - /Volumes/POCKET/Library:/library:ro        # Analog Pocket Library
-  - /Volumes/POCKET/Memories:/playedgames:ro  # Spielstand-/Zeitdaten
-  # - /pfad/zu/roms:/roms:ro                  # Optional: ROM-Sammlung
+  - /Volumes/POCKET/Memories:/playedgames:ro  # play time / session data
+  # - /path/to/roms:/roms:ro                  # optional: ROM collection
 ```
 
-### 4. Passwort setzen
+### 4. Set a password
 
-In `compose.local.yaml` unter `environment`:
+In `compose.local.yaml` under `environment`:
 
 ```yaml
 environment:
-  - ADMIN_PASSWORD=dein-passwort   # Passwort für den Login-Button
+  - ADMIN_PASSWORD=your-password   # password for the login button
 ```
 
-Ohne `ADMIN_PASSWORD` ist die App im öffentlichen Modus (kein Login nötig).
+Without `ADMIN_PASSWORD` the app runs in open mode (no login required).
 
-### 5. Starten
+### 5. Start
 
 ```bash
 docker compose -f compose.local.yaml up -d
 ```
 
-Die App ist erreichbar unter **http://localhost:3000**
+The app is available at **http://localhost:3000**
 
-Beim ersten Start (und bei jeder Neustart) werden automatisch:
-1. Die Library-Bilder konvertiert (`.bin` → `.png`)
-2. Spielzeiten aus `list.bin` / `playtimes.bin` eingelesen
-3. Titel via No-Intro Datenbank zugeordnet
+On every container start, the app automatically:
+1. Converts all library images (`.bin` → `.png`)
+2. Imports play times from `list.bin` / `playtimes.bin`
+3. Matches titles via the No-Intro database
 
-Der Fortschritt ist im Container-Log sichtbar:
+Progress is visible in the container log:
 
-```
+```bash
 docker compose -f compose.local.yaml logs -f
 ```
 
 ---
 
-## Konfiguration im Detail
+## Configuration
 
 ### Volumes
 
-| Mount (Host → Container) | Pflicht | Beschreibung |
+| Mount (host → container) | Required | Description |
 |---|---|---|
-| `./data:/app/data` | ✅ | Persistente App-Daten (Spieldatenbank, Cover, Fotos) |
-| `/pfad/Library:/library:ro` | ✅ | Analog Pocket Library-Ordner mit Cover-Bildern |
-| `/pfad/Memories:/playedgames:ro` | ✅ | Enthält `list.bin` und `playtimes.bin` |
-| `/pfad/roms:/roms:ro` | ❌ | Optionale ROM-Sammlung für bessere Titelzuordnung |
+| `./data:/app/data` | ✅ | Persistent app data (game database, covers, photos) |
+| `/path/Library:/library:ro` | ✅ | Analog Pocket Library folder with cover images |
+| `/path/Memories:/playedgames:ro` | ✅ | Contains `list.bin` and `playtimes.bin` |
+| `/path/roms:/roms:ro` | ❌ | Optional ROM collection for better title matching |
 
-**Analog Pocket SD-Karte – Ordnerstruktur:**
+**Analog Pocket SD card folder structure:**
 
 ```
-SD-Karte/
+SD card/
 ├── Library/
 │   └── Images/
-│       ├── GB/         ← Game Boy Cover (.bin)
-│       ├── GBC/        ← Game Boy Color Cover (.bin)
-│       └── GBA/        ← Game Boy Advance Cover (.bin)
+│       ├── GB/         ← Game Boy covers (.bin)
+│       ├── GBC/        ← Game Boy Color covers (.bin)
+│       └── GBA/        ← Game Boy Advance covers (.bin)
 └── Memories/
-    └── playtimes.bin   ← Spielzeiten aller Titel
-    (list.bin wird vom Pocket generiert)
+    └── playtimes.bin   ← play times for all titles
+    (list.bin is generated by the Pocket firmware)
 ```
 
-### Environment-Variablen
+### Environment variables
 
-| Variable | Standard | Beschreibung |
+| Variable | Default | Description |
 |---|---|---|
-| `ADMIN_PASSWORD` | *(leer)* | Passwort für den Login. Leer = kein Passwortschutz |
-| `POCKET_LIBRARY_DIR` | `/library` | Pfad zum Library-Ordner im Container |
-| `POCKET_PLAYED_DIR` | `/playedgames` | Pfad zum Spielzeit-Ordner im Container |
-| `ROMS_DIR` | `/roms` | Pfad zur ROM-Sammlung (optional) |
+| `ADMIN_PASSWORD` | *(empty)* | Login password. Empty = no password protection |
+| `POCKET_LIBRARY_DIR` | `/library` | Path to the Library folder inside the container |
+| `POCKET_PLAYED_DIR` | `/playedgames` | Path to the play time folder inside the container |
+| `ROMS_DIR` | `/roms` | Path to the ROM collection (optional) |
 
-### Vollständige `compose.local.yaml`
+### Full `compose.local.yaml`
 
 ```yaml
 services:
@@ -170,10 +170,10 @@ services:
       - ./data:/app/data
       - /Volumes/POCKET/Library:/library:ro
       - /Volumes/POCKET/Memories:/playedgames:ro
-      # - /pfad/zu/roms:/roms:ro
+      # - /path/to/roms:/roms:ro
     environment:
       - NODE_ENV=production
-      - ADMIN_PASSWORD=dein-passwort
+      - ADMIN_PASSWORD=your-password
       - POCKET_LIBRARY_DIR=/library
       - POCKET_PLAYED_DIR=/playedgames
       # - ROMS_DIR=/roms
@@ -182,28 +182,28 @@ services:
 
 ---
 
-## Demo-Daten (ohne Analog Pocket)
+## Demo data (without an Analog Pocket)
 
-Zum Ausprobieren ohne echte SD-Karte können Demo-Dateien in `demodata/` abgelegt werden:
+To try the app without a real SD card, place demo files in `demodata/`:
 
 ```
 demodata/
 ├── library/
 │   └── Images/
-│       ├── GB/     ← *.bin Dateien aus der Pocket Library
+│       ├── GB/     ← *.bin files from the Pocket Library
 │       └── GBC/
 └── playedgames/
     ├── list.bin
     └── playtimes.bin
 ```
 
-Die Pfade in `compose.local.yaml` dann entsprechend auf `./demodata/...` zeigen lassen (bereits so vorkonfiguriert).
+The paths in `compose.local.yaml` already point to `./demodata/...` by default.
 
 ---
 
-## Daten sichern
+## Backup
 
-Die gesamte Datenbank liegt in `data/games.json`. Cover-Bilder und Fotos liegen in `data/library/` und `data/cartridges/`. Ein einfaches Backup:
+The entire database lives in `data/games.json`. Cover art and photos are in `data/library/` and `data/cartridges/`. A simple backup:
 
 ```bash
 cp -r data/ data-backup-$(date +%Y%m%d)/
@@ -211,15 +211,15 @@ cp -r data/ data-backup-$(date +%Y%m%d)/
 
 ---
 
-## Entwicklung
+## Development
 
 ```bash
 npm install
-cp .env.local.example .env.local   # oder: echo "ADMIN_PASSWORD=dev" > .env.local
+echo "ADMIN_PASSWORD=dev" > .env.local
 npm run dev
 ```
 
-App läuft unter http://localhost:3000
+App runs at http://localhost:3000
 
 ---
 
@@ -228,5 +228,5 @@ App läuft unter http://localhost:3000
 - **Next.js 15** (App Router, Standalone Build)
 - **TypeScript**
 - **Tailwind CSS v4**
-- **Python 3** (Import-Script für Analog Pocket Daten)
-- **Docker** (Alpine-Image, ~200 MB)
+- **Python 3** (import script for Analog Pocket data)
+- **Docker** (Alpine image, ~200 MB)
