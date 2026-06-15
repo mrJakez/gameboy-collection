@@ -11,17 +11,17 @@ A self-hosted web app to manage your Game Boy cartridge collection — with dire
 ### Game Overview
 ![Game Overview](docs/screenshots/overview.png)
 
-The main view shows all games as cards with cover art (automatically pulled from the Analog Pocket library), status badge, star rating and play time. Clicking the stat tiles at the top filters the list instantly.
+The main view shows all games as cards with cover art (automatically pulled from the Analog Pocket library) or virtual cartridge renders. Status badge, star rating and play time are shown per card. The stat tiles at the top act as quick filters; full search and filter controls are below.
 
 ### Game Detail
 ![Game Detail](docs/screenshots/detail.png)
 
-The detail page shows play time, sessions, last played date and notes. When logged in, all fields can be edited, a custom cartridge photo can be uploaded and the "lent out" flag can be toggled.
+The detail page shows play time, session count, last played date and notes. A Cartridge / Cover toggle switches between the virtual cartridge view and the Pocket library cover image. When logged in, all fields can be edited, a cartridge photo can be uploaded and the "lent out" flag can be toggled.
 
 ### Play Time Ranking
 ![Play Time](docs/screenshots/playtime.png)
 
-A sortable leaderboard of all played titles with bar chart, total and average play time.
+A sortable leaderboard of all played titles with progress bar, total play time and average per game. Sort by play time, name, last played date or system.
 
 ---
 
@@ -31,14 +31,19 @@ A sortable leaderboard of all played titles with bar chart, total and average pl
   - Play times and sessions from `list.bin` / `playtimes.bin`
   - Cover art from the Library (GB · GBC · GBA)
   - Title matching via No-Intro database (~8,400 entries)
+  - Reset protection: if Pocket data is lower than stored, play times are added rather than overwritten
+- **Pocket Sync upload** — upload `list.bin` and `playtimes.bin` directly via the web UI (no SD card reader needed)
 - **Game management**
   - Status: Playing · Completed · Owned · Wishlist
   - Star rating (1–5)
-  - Notes, purchase price, lent-out flag
-  - Custom cartridge photo upload
+  - Notes with clickable URLs, purchase price, lent-out flag
+  - Custom cartridge photo upload (JPEG, HEIC supported; EXIF rotation applied automatically)
+  - Virtual cartridge render with label placed in the cartridge shell
+  - Cartridge / Cover toggle on the detail page when both images are available
 - **Filtering & search**
   - Full-text search (title, publisher, genre)
   - Filter by status, platform, minimum rating, lent-out
+  - Filter state persisted in the URL — navigating back restores the last search
   - Clickable stat tiles as quick filters
 - **Play time view** with ranking, sorting and "hide completed" toggle
 - **Password protection** — reading is always public, editing requires login

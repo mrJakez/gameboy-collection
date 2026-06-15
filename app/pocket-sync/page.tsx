@@ -33,7 +33,7 @@ export default function PocketSyncPage() {
       setOutput(data.output ?? "");
     } else {
       setStatus("error");
-      setError(data.error ?? "Unbekannter Fehler");
+      setError(data.error ?? "Unknown error");
       setOutput(data.output ?? "");
     }
   }
@@ -48,13 +48,13 @@ export default function PocketSyncPage() {
 
       <h2 className="text-xl font-bold text-zinc-100 mb-1">Pocket Sync</h2>
       <p className="text-xs text-zinc-500 mb-6">
-        Lädt Spielzeiten und Spiele von der Analogue Pocket SD-Karte.
+        Import play times and games from your Analogue Pocket SD card.
       </p>
 
       {/* Hint box */}
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-6 text-sm text-zinc-400">
-        <p className="font-medium text-zinc-300 mb-2">Wo finde ich die Dateien?</p>
-        <p className="mb-1">Auf der SD-Karte der Analogue Pocket unter:</p>
+        <p className="font-medium text-zinc-300 mb-2">Where to find the files?</p>
+        <p className="mb-1">On your Analogue Pocket SD card under:</p>
         <code className="block bg-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono mt-2">
           System/Played Games/list.bin<br />
           System/Played Games/playtimes.bin
@@ -85,8 +85,8 @@ export default function PocketSyncPage() {
             </>
           ) : (
             <>
-              <p className="text-zinc-400 text-sm">list.bin auswählen</p>
-              <p className="text-xs text-zinc-600 mt-1">Klicken zum Durchsuchen</p>
+              <p className="text-zinc-400 text-sm">Select list.bin</p>
+              <p className="text-xs text-zinc-600 mt-1">Click to browse</p>
             </>
           )}
         </div>
@@ -114,8 +114,8 @@ export default function PocketSyncPage() {
             </>
           ) : (
             <>
-              <p className="text-zinc-400 text-sm">playtimes.bin auswählen</p>
-              <p className="text-xs text-zinc-600 mt-1">Klicken zum Durchsuchen</p>
+              <p className="text-zinc-400 text-sm">Select playtimes.bin</p>
+              <p className="text-xs text-zinc-600 mt-1">Click to browse</p>
             </>
           )}
         </div>
@@ -125,14 +125,14 @@ export default function PocketSyncPage() {
           disabled={!ready || status === "uploading"}
           className="w-full py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-zinc-100 rounded-lg transition-colors"
         >
-          {status === "uploading" ? "Wird importiert…" : "Importieren"}
+          {status === "uploading" ? "Importing…" : "Import"}
         </button>
       </form>
 
       {/* Result */}
       {status === "done" && (
         <div className="mt-6 bg-green-950/30 border border-green-800 rounded-xl p-4">
-          <p className="text-green-400 text-sm font-medium mb-3">Import abgeschlossen</p>
+          <p className="text-green-400 text-sm font-medium mb-3">Import complete</p>
           {output && (
             <pre className="text-xs text-zinc-400 whitespace-pre-wrap font-mono overflow-x-auto">
               {output}
@@ -142,14 +142,14 @@ export default function PocketSyncPage() {
             onClick={() => router.push("/")}
             className="mt-4 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-100 rounded-lg transition-colors"
           >
-            Zur Übersicht
+            Back to collection
           </button>
         </div>
       )}
 
       {status === "error" && (
         <div className="mt-6 bg-red-950/30 border border-red-800 rounded-xl p-4">
-          <p className="text-red-400 text-sm font-medium mb-1">Fehler beim Import</p>
+          <p className="text-red-400 text-sm font-medium mb-1">Import failed</p>
           <p className="text-xs text-zinc-400 mb-3">{error}</p>
           {output && (
             <pre className="text-xs text-zinc-500 whitespace-pre-wrap font-mono overflow-x-auto">

@@ -14,6 +14,10 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ARG BUILD_SHA
+ARG BUILD_TIME
+ENV NEXT_PUBLIC_BUILD_SHA=$BUILD_SHA
+ENV NEXT_PUBLIC_BUILD_TIME=$BUILD_TIME
 RUN npm run build
 
 # Runner

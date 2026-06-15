@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readGames, createGame } from "@/lib/db";
 import type { Game, GameStatus } from "@/lib/games";
+import { impliesOwnership } from "@/lib/games";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest) {
         g.genre.some((gen) => gen.toLowerCase().includes(q))
     );
   }
-  if (status) games = games.filter((g) => g.status === (status as GameStatus));
+  if (status === "backlog") games = games.filter((g) => impliesOwnership(g.status));
+  else if (status) games = games.filter((g) => g.status === (status as GameStatus));
   if (platform) games = games.filter((g) => g.platform === platform);
   if (lent === "1") games = games.filter((g) => g.lent);
 

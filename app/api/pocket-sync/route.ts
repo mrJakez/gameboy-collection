@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
   const playtimesBin = formData.get("playtimes") as File | null;
 
   if (!listBin || !playtimesBin) {
-    return NextResponse.json({ error: "Beide Dateien (list.bin und playtimes.bin) werden benötigt." }, { status: 400 });
+    return NextResponse.json({ error: "Both files (list.bin and playtimes.bin) are required." }, { status: 400 });
   }
 
   if (!listBin.name.endsWith(".bin") || !playtimesBin.name.endsWith(".bin")) {
-    return NextResponse.json({ error: "Nur .bin-Dateien erlaubt." }, { status: 400 });
+    return NextResponse.json({ error: "Only .bin files are allowed." }, { status: 400 });
   }
 
   const playedDir = process.env.POCKET_PLAYED_DIR ?? path.join(process.cwd(), "pocket-played");

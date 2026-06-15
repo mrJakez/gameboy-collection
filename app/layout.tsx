@@ -11,6 +11,11 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Game Boy Collection",
   description: "My Game Boy cartridge collection",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -41,6 +46,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
           <main>{children}</main>
+          {(process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_TIME) && (
+            <footer className="mt-12 pb-4 text-center">
+              <span className="text-[11px] text-zinc-800 font-mono">
+                {process.env.NEXT_PUBLIC_BUILD_SHA && <>#{process.env.NEXT_PUBLIC_BUILD_SHA}</>}
+                {process.env.NEXT_PUBLIC_BUILD_SHA && process.env.NEXT_PUBLIC_BUILD_TIME && <> · </>}
+                {process.env.NEXT_PUBLIC_BUILD_TIME && <>{process.env.NEXT_PUBLIC_BUILD_TIME.replace("T", " ").replace("Z", " UTC")}</>}
+              </span>
+            </footer>
+          )}
         </div>
       </body>
     </html>
