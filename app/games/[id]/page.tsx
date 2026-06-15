@@ -3,6 +3,7 @@
 import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import CartridgeSVG from "@/app/components/CartridgeSVG";
 import {
   Game,
   STATUS_LABELS,
@@ -56,20 +57,46 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputCls = "w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 transition-colors";
 
+const URL_RE = /https?:\/\/[^\s<>"]+/g;
+
+function renderNotes(text: string) {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(URL_RE)) {
+    if (m.index! > last) parts.push(text.slice(last, m.index));
+    const url = m[0];
+    parts.push(
+      <a key={m.index} href={url} target="_blank" rel="noopener noreferrer"
+        className="text-blue-400 underline hover:text-blue-300 break-all">
+        {url}
+      </a>
+    );
+    last = m.index! + url.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
 export default function GameDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const [backHref, setBackHref] = useState("/");
 
   useEffect(() => {
-    const from = new URLSearchParams(window.location.search).get("from");
-    if (from === "playtime") setBackHref("/playtime");
+    const sp = new URLSearchParams(window.location.search);
+    const back = sp.get("back");
+    if (back) {
+      setBackHref(decodeURIComponent(back));
+    } else if (sp.get("from") === "playtime") {
+      setBackHref("/playtime");
+    }
   }, []);
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [processingLabel, setProcessingLabel] = useState(false);
   const [form, setForm] = useState<Partial<Game>>({});
 
   const checkAuth = useCallback(async () => {
@@ -153,8 +180,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
   const platformColor = PLATFORM_COLORS[game.platform];
   const statusColor = STATUS_COLORS[game.status];
-  const coverSrc = game.cartridgeImage ?? game.libraryImage ?? null;
   const isLibraryImg = !game.cartridgeImage && !!game.libraryImage;
+  const hasCartridgeLabel = !!game.cartridgeImage;
 
   return (
     <div className="max-w-3xl">
@@ -230,52 +257,73 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
         <>
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
             {/* Image area */}
-            <div className="w-full sm:w-40 sm:shrink-0 max-w-[180px] mx-auto sm:mx-0">
-              <div className={`bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center ${
-                isLibraryImg ? "aspect-[160/144]" : "aspect-[3/4]"
-              }`}>
-                {coverSrc ? (
-                  <Image
-                    src={coverSrc}
-                    alt={game.title}
-                    fill
-                    className={isLibraryImg ? "object-contain" : "object-cover"}
-                    style={isLibraryImg ? { imageRendering: "pixelated" } : undefined}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-zinc-600">
-                    <span className="text-5xl">🎮</span>
-                    <span className="text-xs font-mono">{game.platform}</span>
-                  </div>
-                )}
-              </div>
+            <div className="w-full sm:w-48 sm:shrink-0 max-w-[200px] mx-auto sm:mx-0">
+              {/* Virtual cartridge or library cover */}
+              {hasCartridgeLabel ? (
+                <div className="flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded-xl aspect-square">
+                  <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
+                </div>
+              ) : (
+                <div className={`bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center ${
+                  isLibraryImg ? "aspect-[160/144]" : "aspect-[3/4]"
+                }`}>
+                  {isLibraryImg ? (
+                    <Image
+                      src={game.libraryImage!}
+                      alt={game.title}
+                      fill
+                      className="object-contain"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-zinc-600">
+                      <span className="text-5xl">🎮</span>
+                      <span className="text-xs font-mono">{game.platform}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Image actions */}
-              {authenticated && <div className="mt-2 flex flex-col items-center gap-1">
-                <label className="block text-center cursor-pointer">
-                  <span className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
-                    {game.cartridgeImage ? "Replace photo" : "Upload photo"}
-                  </span>
-                  <input type="file" accept="image/*" className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const fd = new FormData();
-                      fd.append("file", file);
-                      fd.append("gameId", id);
-                      const res = await fetch("/api/upload", { method: "POST", body: fd });
-                      const { path } = await res.json();
-                      await patch({ cartridgeImage: path });
-                    }}
-                  />
-                </label>
-                {game.cartridgeImage && (
-                  <button onClick={deleteCartridgeImage}
-                    className="text-xs text-red-700 hover:text-red-500 transition-colors">
-                    Delete photo
-                  </button>
-                )}
-              </div>}
+              {authenticated && (
+                <div className="mt-2 flex flex-col items-center gap-1">
+                  {processingLabel ? (
+                    <span className="text-xs text-zinc-500 animate-pulse">Extracting label…</span>
+                  ) : (
+                    <label className="block text-center cursor-pointer">
+                      <span className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
+                        {game.cartridgeImage ? "Replace cartridge photo" : "📷 Upload cartridge photo"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setProcessingLabel(true);
+                          const fd = new FormData();
+                          fd.append("file", file);
+                          fd.append("gameId", id);
+                          const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
+                          const { path, error } = await res.json();
+                          setProcessingLabel(false);
+                          if (path) await patch({ cartridgeImage: path });
+                          else alert(error ?? "Processing failed");
+                        }}
+                      />
+                    </label>
+                  )}
+                  {game.cartridgeImage && !processingLabel && (
+                    <button
+                      onClick={deleteCartridgeImage}
+                      className="text-xs text-red-700 hover:text-red-500 transition-colors"
+                    >
+                      Remove cartridge label
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Info */}
@@ -348,9 +396,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           {/* Notes */}
           <div className="mb-8">
             <h2 className="text-sm font-semibold text-zinc-300 mb-2">Notes</h2>
-            <p className="text-sm text-zinc-400 whitespace-pre-wrap bg-zinc-900 border border-zinc-800 rounded-xl p-4 min-h-16">
-              {game.notes || <span className="text-zinc-700">No notes</span>}
-            </p>
+            <div className="text-sm text-zinc-400 whitespace-pre-wrap bg-zinc-900 border border-zinc-800 rounded-xl p-4 min-h-16">
+              {game.notes ? renderNotes(game.notes) : <span className="text-zinc-700">No notes</span>}
+            </div>
           </div>
 
           {/* Delete */}

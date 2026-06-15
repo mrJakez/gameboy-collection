@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Game, STATUS_LABELS, STATUS_COLORS, PLATFORM_COLORS, formatPlaytime, GameStatus, Platform } from "@/lib/games";
 import Image from "next/image";
+import CartridgeSVG from "@/app/components/CartridgeSVG";
 
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
 const PLATFORMS: Platform[] = ["GB", "GBC", "GBA", "GBP"];
@@ -18,29 +20,29 @@ function StarRating({ rating }: { rating: number | null }) {
   );
 }
 
-function GameCard({ game }: { game: Game }) {
+function GameCard({ game, urlSuffix }: { game: Game; urlSuffix: string }) {
   const statusColor = STATUS_COLORS[game.status];
   const platformColor = PLATFORM_COLORS[game.platform];
 
-  const coverSrc = game.cartridgeImage ?? game.libraryImage ?? null;
   const isLibraryImg = !game.cartridgeImage && !!game.libraryImage;
+  const hasCartridgeLabel = !!game.cartridgeImage;
 
   return (
-    <a href={`/games/${game.id}`} className="group block h-full">
+    <a href={`/games/${game.id}${urlSuffix}`} className="group block h-full">
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 hover:bg-zinc-800/60 transition-all duration-200 h-full flex flex-col">
-        {/* 160×144 for library images, 3:4 portrait for cartridge photos / placeholder */}
-        <div className={`bg-zinc-800 relative flex items-center justify-center overflow-hidden ${
-          isLibraryImg ? "aspect-[160/144]" : "aspect-[3/4]"
-        }`}>
-          {coverSrc ? (
+        {/* Uniform image area (cartridge aspect) — image fills edge-to-edge, no gray letterbox */}
+        <div className="bg-zinc-900 relative flex items-center justify-center overflow-hidden aspect-[940/1064]">
+          {hasCartridgeLabel ? (
+            <div className="absolute inset-0 p-1.5 group-hover:scale-105 transition-transform duration-300">
+              <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
+            </div>
+          ) : isLibraryImg ? (
             <Image
-              src={coverSrc}
+              src={game.libraryImage!}
               alt={game.title}
               fill
-              className={isLibraryImg
-                ? "object-contain group-hover:scale-105 transition-transform duration-300"
-                : "object-cover group-hover:scale-105 transition-transform duration-300"}
-              style={isLibraryImg ? { imageRendering: "pixelated" } : undefined}
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              style={{ imageRendering: "pixelated" }}
             />
           ) : (
             <div className="flex flex-col items-center gap-2 text-zinc-600">
@@ -48,15 +50,15 @@ function GameCard({ game }: { game: Game }) {
               <span className="text-xs font-mono">{game.platform}</span>
             </div>
           )}
-          <span className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-xs font-mono font-bold ${platformColor}`}>
+          <span className={`absolute bottom-2 left-2 px-1.5 py-0.5 rounded text-xs font-mono font-bold ${platformColor}`}>
             {game.platform}
           </span>
           {game.lent ? (
-            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-xs border bg-orange-500/20 text-orange-300 border-orange-500/40">
+            <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-full text-xs border bg-orange-500/20 text-orange-300 border-orange-500/40">
               Lent out
             </span>
           ) : (
-            <span className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-xs border ${statusColor}`}>
+            <span className={`absolute bottom-2 right-2 px-1.5 py-0.5 rounded-full text-xs border ${statusColor}`}>
               {STATUS_LABELS[game.status]}
             </span>
           )}
@@ -119,15 +121,34 @@ function StatsBar({ games, statusFilter, onFilter }: { games: Game[]; statusFilt
   );
 }
 
-export default function HomePage() {
+function HomePage() {
   const [allGames, setAllGames] = useState<Game[]>([]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const query = searchParams.get("q") ?? "";
+  const statusFilter = searchParams.get("status") ?? "";
+  const platformFilter = searchParams.get("platform") ?? "";
+  const ratingFilter = Number(searchParams.get("rating") ?? 0);
+  const lentFilter = searchParams.get("lent") === "1";
+
   const [games, setGames] = useState<Game[]>([]);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [platformFilter, setPlatformFilter] = useState("");
-  const [ratingFilter, setRatingFilter] = useState(0);
-  const [lentFilter, setLentFilter] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  function updateParams(updates: Record<string, string>) {
+    const p = new URLSearchParams(searchParams.toString());
+    for (const [k, v] of Object.entries(updates)) {
+      if (v) p.set(k, v); else p.delete(k);
+    }
+    router.replace(`/?${p.toString()}`, { scroll: false });
+  }
+
+  function setQuery(v: string) { updateParams({ q: v }); }
+  function setStatusFilter(v: string) { updateParams({ status: v }); }
+  function setPlatformFilter(v: string) { updateParams({ platform: v }); }
+  function setRatingFilter(v: number) { updateParams({ rating: v > 0 ? String(v) : "" }); }
+  function setLentFilter(v: boolean) { updateParams({ lent: v ? "1" : "" }); }
 
   useEffect(() => {
     fetch("/api/games").then((r) => r.json()).then(setAllGames);
@@ -159,17 +180,36 @@ export default function HomePage() {
       <StatsBar games={allGames} statusFilter={statusFilter} onFilter={setStatusFilter} />
 
       <div className="flex flex-col gap-3 mb-8">
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">🔍</span>
-          <input
-            type="text"
-            placeholder="Search game, publisher or genre…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 focus:bg-zinc-800/60 transition-colors"
-          />
+        {/* Search + mobile filter toggle */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">🔍</span>
+            <input
+              type="text"
+              placeholder="Search game, publisher or genre…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 focus:bg-zinc-800/60 transition-colors"
+            />
+          </div>
+          {/* Filter toggle — mobile only */}
+          <button
+            onClick={() => setFiltersOpen((v) => !v)}
+            className={`sm:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-all ${
+              filtersOpen || statusFilter || platformFilter || ratingFilter > 0 || lentFilter
+                ? "bg-zinc-700 text-zinc-100 border-zinc-600"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400"
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M6 8h12M9 12h6" />
+            </svg>
+            Filter
+          </button>
         </div>
-        <div className="flex flex-wrap gap-2">
+
+        {/* Filters — always visible on desktop, collapsible on mobile */}
+        <div className={`flex flex-wrap gap-2 ${filtersOpen ? "flex" : "hidden sm:flex"}`}>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -201,7 +241,7 @@ export default function HomePage() {
             ))}
           </div>
           <button
-            onClick={() => setLentFilter((v) => !v)}
+            onClick={() => setLentFilter(!lentFilter)}
             className={`px-3 py-2 rounded-lg text-sm border transition-all whitespace-nowrap ${
               lentFilter
                 ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
@@ -245,10 +285,20 @@ export default function HomePage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 [grid-auto-rows:1fr]">
           {filtered.map((game) => (
-            <GameCard key={game.id} game={game} />
+            <GameCard key={game.id} game={game} urlSuffix={searchParams.toString() ? `?back=${encodeURIComponent("/?"+searchParams.toString())}` : ""} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+import { Suspense } from "react";
+
+export default function Page() {
+  return (
+    <Suspense>
+      <HomePage />
+    </Suspense>
   );
 }

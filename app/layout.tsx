@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthButton from "@/app/components/AuthButton";
 import GameBoyIcon from "@/app/components/GameBoyIcon";
+import HeaderNav from "@/app/components/HeaderNav";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -29,13 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <AuthButton />
-              <a
-                href="/playtime"
-                className="px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
-              >
-                <span className="sm:hidden">⏱</span>
-                <span className="hidden sm:inline">⏱ Play Time</span>
-              </a>
+              <HeaderNav />
               <a
                 href="/games/new"
                 className="flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors border border-zinc-700"

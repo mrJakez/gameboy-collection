@@ -49,7 +49,7 @@ MAX_SECONDS = 999 * 3600  # 999 hours
 def parse_list_bin(path: Path) -> list[dict]:
     """Parse Played Games/list.bin → list of {title, rom_crc, platform}"""
     data = path.read_bytes()
-    if data[:5] != b"\x01FAT!":
+    if data[:4] != b"\x01FAT":
         raise ValueError(f"Unexpected magic in {path}: {data[:5].hex()}")
 
     # Collect unique non-zero offsets from the FAT table (starts at byte 12)
@@ -96,7 +96,7 @@ def parse_list_bin(path: Path) -> list[dict]:
 def parse_playtimes_bin(path: Path) -> dict[str, dict]:
     """Parse Played Games/playtimes.bin → {crc: {seconds, last_played}}"""
     data = path.read_bytes()
-    if data[:5] != b"\x01TPP!":
+    if data[:4] != b"\x01TPP":
         raise ValueError(f"Unexpected magic in {path}: {data[:5].hex()}")
 
     playtimes = {}
@@ -413,8 +413,21 @@ def main():
 
         if existing:
             changed = False
-            if playtime_mins > existing.get("playtime", 0):
-                existing["playtime"] = playtime_mins; changed = True
+            stored_mins = existing.get("playtime", 0) or 0
+
+            if playtime_mins >= stored_mins:
+                # Normal case: Pocket has equal or more time → use Pocket value directly
+                if playtime_mins > stored_mins:
+                    existing["playtime"] = playtime_mins; changed = True
+            else:
+                # Reset detected: Pocket shows less time than stored.
+                # The Pocket was reset at some point; playtime_mins is time accumulated
+                # since the reset. Add it on top of what we already have.
+                merged = stored_mins + playtime_mins
+                existing["playtime"] = merged; changed = True
+                print(f"   ⚠️  Reset erkannt: {pg['title']} "
+                      f"(gespeichert {stored_mins}m + Pocket {playtime_mins}m = {merged}m)")
+
             if last_played and (not existing.get("lastPlayed") or last_played > existing["lastPlayed"]):
                 existing["lastPlayed"] = last_played; changed = True
             if lib_image_url and not existing.get("cartridgeImage"):

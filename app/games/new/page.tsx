@@ -21,8 +21,10 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const justSelected = useRef(false);
 
   useEffect(() => {
+    if (justSelected.current) { justSelected.current = false; return; }
     if (!query && !open) return;
     setLoading(true);
     const t = setTimeout(async () => {
@@ -47,6 +49,7 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
   }, []);
 
   function select(entry: LibraryEntry) {
+    justSelected.current = true;
     onSelect(entry);
     setQuery(entry.title);
     setOpen(false);
@@ -181,17 +184,20 @@ export default function NewGamePage() {
           <label className="block text-xs text-zinc-500 mb-1.5">Select from library</label>
           <LibrarySearch onSelect={handleLibrarySelect} />
           {selectedLibEntry?.libraryImage && (
-            <div className="mt-2 flex items-center gap-3">
-              <div className="w-16 h-12 bg-zinc-800 rounded-lg overflow-hidden relative">
+            <div className="mt-3 flex items-start gap-4">
+              <div className="w-32 shrink-0 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative aspect-[160/144]">
                 <Image
                   src={selectedLibEntry.libraryImage}
                   alt={form.title}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   style={{ imageRendering: "pixelated" }}
                 />
               </div>
-              <p className="text-xs text-green-400">Cover loaded from library ✓</p>
+              <div className="pt-1">
+                <p className="text-xs text-green-400 font-medium">Cover loaded ✓</p>
+                <p className="text-xs text-zinc-500 mt-1">{selectedLibEntry.title}</p>
+              </div>
             </div>
           )}
         </div>

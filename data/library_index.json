@@ -7057,8 +7057,8 @@
   },
   {
     "libCrc": "3340e600",
-    "romCrc": null,
-    "title": "Kung-Fu Master (USA, Europe)",
+    "romCrc": "6c55c067",
+    "title": "Kung-Fu Master",
     "platform": "GB"
   },
   {
@@ -15321,7 +15321,7 @@
     "libCrc": "6e135b4d",
     "romCrc": "582f9db9",
     "title": "Spider-Man: Mysterio's Menace",
-    "platform": "GBA"
+    "platform": "GB"
   },
   {
     "libCrc": "6e330fcd",
@@ -29787,7 +29787,7 @@
     "libCrc": "d6141609",
     "romCrc": "0a02c27a",
     "title": "Wario Land 4",
-    "platform": "GBA"
+    "platform": "GB"
   },
   {
     "libCrc": "d6185941",

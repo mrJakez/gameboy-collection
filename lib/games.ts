@@ -64,8 +64,8 @@ export const PLATFORM_COLORS: Record<Platform, string> = {
 };
 
 export const STATUS_COLORS: Record<GameStatus, string> = {
-  playing: "bg-green-500/20 text-green-300 border-green-500/30",
-  completed: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  wishlist: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-  backlog: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  playing: "bg-green-600 text-white border-green-500 font-semibold",
+  completed: "bg-blue-600 text-white border-blue-500 font-semibold",
+  wishlist: "bg-amber-500 text-white border-amber-400 font-semibold",
+  backlog: "bg-emerald-600 text-white border-emerald-500 font-semibold",
 };
