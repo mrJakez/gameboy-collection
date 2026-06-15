@@ -197,7 +197,8 @@ function HomePage() {
             />
             {query && (
               <button
-                onClick={() => setQuery("")}
+                type="button"
+                onPointerDown={(e) => { e.preventDefault(); setQuery(""); }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                 aria-label="Clear search"
               >

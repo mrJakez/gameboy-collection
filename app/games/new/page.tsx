@@ -14,9 +14,19 @@ interface LibraryEntry {
   libraryImage: string | null;
 }
 
+interface ExistingGame {
+  id: string;
+  title: string;
+  platform: string;
+  status: string;
+  libraryImage: string | null;
+  cartridgeImage: string | null;
+}
+
 function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LibraryEntry[]>([]);
+  const [existing, setExisting] = useState<ExistingGame[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,9 +38,13 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
     if (!query && !open) return;
     setLoading(true);
     const t = setTimeout(async () => {
-      const res = await fetch(`/api/library?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      setResults(data);
+      const [libRes, gamesRes] = await Promise.all([
+        fetch(`/api/library?q=${encodeURIComponent(query)}`),
+        fetch(`/api/games?q=${encodeURIComponent(query)}`),
+      ]);
+      const [libData, gamesData] = await Promise.all([libRes.json(), gamesRes.json()]);
+      setResults(libData);
+      setExisting(Array.isArray(gamesData) ? gamesData.slice(0, 5) : []);
       setOpen(true);
       setLoading(false);
     }, 150);
@@ -55,6 +69,8 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
     setOpen(false);
   }
 
+  const hasResults = results.length > 0 || existing.length > 0;
+
   return (
     <div ref={containerRef} className="relative">
       <div className="relative">
@@ -73,38 +89,77 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
         )}
       </div>
 
-      {open && results.length > 0 && (
+      {open && hasResults && (
         <div className="absolute z-50 mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
-          {results.map((entry) => (
-            <button
-              key={entry.romCrc}
-              type="button"
-              onClick={() => select(entry)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left"
-            >
-              <div className="w-10 h-10 bg-zinc-800 rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center">
-                {entry.libraryImage ? (
-                  <Image
-                    src={entry.libraryImage}
-                    alt={entry.title}
-                    fill
-                    className="object-cover"
-                    style={{ imageRendering: "pixelated" }}
-                  />
-                ) : (
-                  <span className="text-xl">🎮</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-zinc-100 truncate">{entry.title}</p>
-                <p className="text-xs text-zinc-600 font-mono">{entry.romCrc}</p>
-              </div>
-            </button>
-          ))}
+          {/* Already in collection */}
+          {existing.length > 0 && (
+            <>
+              <p className="px-3 pt-2.5 pb-1 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Already in your collection</p>
+              {existing.map((game) => {
+                const thumb = game.cartridgeImage ?? game.libraryImage;
+                return (
+                  <a
+                    key={game.id}
+                    href={`/games/${game.id}`}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 bg-zinc-800 rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center">
+                      {thumb ? (
+                        <Image src={thumb} alt={game.title} fill className="object-cover" style={{ imageRendering: "pixelated" }} />
+                      ) : (
+                        <span className="text-xl">🎮</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-zinc-100 truncate">{game.title}</p>
+                      <p className="text-xs text-zinc-500">{game.platform} · {game.status}</p>
+                    </div>
+                    <span className="text-[10px] text-amber-500/80 border border-amber-500/30 rounded px-1.5 py-0.5 shrink-0">In collection</span>
+                  </a>
+                );
+              })}
+              {results.length > 0 && <div className="border-t border-zinc-800 mt-1" />}
+            </>
+          )}
+
+          {/* Pocket library results */}
+          {results.length > 0 && (
+            <>
+              {existing.length > 0 && (
+                <p className="px-3 pt-2.5 pb-1 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Pocket library</p>
+              )}
+              {results.map((entry) => (
+                <button
+                  key={entry.romCrc}
+                  type="button"
+                  onClick={() => select(entry)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <div className="w-10 h-10 bg-zinc-800 rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center">
+                    {entry.libraryImage ? (
+                      <Image
+                        src={entry.libraryImage}
+                        alt={entry.title}
+                        fill
+                        className="object-cover"
+                        style={{ imageRendering: "pixelated" }}
+                      />
+                    ) : (
+                      <span className="text-xl">🎮</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-100 truncate">{entry.title}</p>
+                    <p className="text-xs text-zinc-600 font-mono">{entry.romCrc}</p>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
 
-      {open && query.length > 0 && results.length === 0 && !loading && (
+      {open && query.length > 0 && !hasResults && !loading && (
         <div className="absolute z-50 mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-500">
           No game found in the library.
         </div>
