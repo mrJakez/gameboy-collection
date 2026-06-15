@@ -16,6 +16,45 @@ async function toJpegBuffer(buffer: Buffer, mimeType: string): Promise<Buffer> {
   return sharp(buffer, { failOn: "none" }).rotate().jpeg({ quality: 85 }).toBuffer();
 }
 
+// Some GB labels print neutral gray bars around the artwork (and the label-bbox
+// estimate can include a sliver of gray cartridge plastic). Trim near-uniform gray
+// rows/columns inward from the requested sides so only the colourful art remains.
+type Sides = { top: boolean; bottom: boolean; left: boolean; right: boolean };
+async function trimBorders(input: Buffer, sides: Sides): Promise<Buffer> {
+  const { data, info } = await sharp(input).raw().toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+
+  const chromaAt = (x: number, y: number): number => {
+    const idx = (y * width + x) * channels;
+    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+    return Math.max(Math.abs(r - g), Math.abs(r - b), Math.abs(g - b));
+  };
+  const colGray = (x: number): boolean => {
+    let n = 0, s = 0;
+    const step = Math.max(1, Math.floor(height / 80));
+    for (let y = 0; y < height; y += step) { if (chromaAt(x, y) < 24) n++; s++; }
+    return s > 0 && n / s > 0.9;
+  };
+  const rowGray = (y: number): boolean => {
+    let n = 0, s = 0;
+    const step = Math.max(1, Math.floor(width / 80));
+    for (let x = 0; x < width; x += step) { if (chromaAt(x, y) < 24) n++; s++; }
+    return s > 0 && n / s > 0.9;
+  };
+
+  const maxX = Math.floor(width * 0.35);  // safety: never eat more than 35% per side
+  const maxY = Math.floor(height * 0.35);
+  let l = 0, r = width - 1, t = 0, b = height - 1;
+  if (sides.left) while (l < maxX && colGray(l)) l++;
+  if (sides.right) while (r > width - 1 - maxX && r > l && colGray(r)) r--;
+  if (sides.top) while (t < maxY && rowGray(t)) t++;
+  if (sides.bottom) while (b > height - 1 - maxY && b > t && rowGray(b)) b--;
+
+  const w = r - l + 1, h = b - t + 1;
+  if (w <= 0 || h <= 0 || (l === 0 && r === width - 1 && t === 0 && b === height - 1)) return input;
+  return sharp(input).extract({ left: l, top: t, width: w, height: h }).toBuffer();
+}
+
 export async function POST(req: NextRequest) {
   if (!isAuthenticated(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,6 +64,60 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const gameId = formData.get("gameId") as string;
+    const select = formData.get("select") as string | null;
+    const crop = formData.get("crop") as string | null;
+    const original = formData.get("original") as string | null;
+
+    const dir = path.join(process.cwd(), "data", "cartridges");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    // Promote a buffer to the stable label file and remove all other leftovers for the game
+    const promote = async (jpg: Buffer): Promise<string> => {
+      const finalName = `${gameId}_label_${Date.now()}.jpg`;
+      fs.writeFileSync(path.join(dir, finalName), jpg);
+      const others = fs.readdirSync(dir).filter(
+        (f) => f.startsWith(`${gameId}_`) && f !== finalName
+      );
+      for (const f of others) fs.unlinkSync(path.join(dir, f));
+      return `/images/cartridges/${finalName}`;
+    };
+
+    // ── Selection step: promote the chosen candidate to the stable label, discard the rest ──
+    if (select && gameId) {
+      const src = path.join(dir, path.basename(select));
+      if (!fs.existsSync(src)) {
+        return NextResponse.json({ error: "Selected variant not found" }, { status: 404 });
+      }
+      const finalPath = await promote(fs.readFileSync(src));
+      return NextResponse.json({ path: finalPath });
+    }
+
+    // ── Manual crop step: extract a user-drawn box from the saved original ──
+    if (crop && original && gameId) {
+      const origPath = path.join(dir, path.basename(original));
+      if (!fs.existsSync(origPath)) {
+        return NextResponse.json({ error: "Original image not found" }, { status: 404 });
+      }
+      const box = JSON.parse(crop) as { x1: number; y1: number; x2: number; y2: number };
+      const meta = await sharp(origPath).metadata();
+      const imgW = meta.width ?? 1000;
+      const imgH = meta.height ?? 1000;
+      const l = Math.max(0, Math.min(1, box.x1));
+      const t = Math.max(0, Math.min(1, box.y1));
+      const r = Math.max(l, Math.min(1, box.x2));
+      const b = Math.max(t, Math.min(1, box.y2));
+      const jpg = await sharp(origPath)
+        .extract({
+          left: Math.round(l * imgW),
+          top: Math.round(t * imgH),
+          width: Math.max(1, Math.round((r - l) * imgW)),
+          height: Math.max(1, Math.round((b - t) * imgH)),
+        })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const finalPath = await promote(jpg);
+      return NextResponse.json({ path: finalPath });
+    }
 
     if (!file || !gameId) {
       return NextResponse.json({ error: "Missing file or gameId" }, { status: 400 });
@@ -111,38 +204,68 @@ Values are fractions of image width/height (0.0–1.0). No explanation, no markd
     const imgW = meta.width ?? 1000;
     const imgH = meta.height ?? 1000;
 
-    const pad = 0.008;
-    const left = Math.max(0, bbox.x1 - pad);
-    const top = Math.max(0, bbox.y1 - pad);
-    const right = Math.min(1, bbox.x2 + pad);
-    const bottom = Math.min(1, bbox.y2 + pad);
+    type Box = { x1: number; y1: number; x2: number; y2: number };
+    const region = async (box: Box, pad = 0.008): Promise<Buffer> => {
+      const l = Math.max(0, box.x1 - pad);
+      const t = Math.max(0, box.y1 - pad);
+      const r = Math.min(1, box.x2 + pad);
+      const b = Math.min(1, box.y2 + pad);
+      return sharp(jpegBuffer)
+        .extract({
+          left: Math.round(l * imgW),
+          top: Math.round(t * imgH),
+          width: Math.max(1, Math.round((r - l) * imgW)),
+          height: Math.max(1, Math.round((b - t) * imgH)),
+        })
+        .toBuffer();
+    };
 
-    const cropW = Math.max(1, Math.round((right - left) * imgW));
-    const cropH = Math.max(1, Math.round((bottom - top) * imgH));
+    // A slightly wider horizontal crop, for labels that extend beyond the estimate
+    const bbw = bbox.x2 - bbox.x1;
+    const wideBox: Box = {
+      x1: Math.max(0, bbox.x1 - bbw * 0.12),
+      y1: bbox.y1,
+      x2: Math.min(1, bbox.x2 + bbw * 0.12),
+      y2: bbox.y2,
+    };
 
-    const croppedBuffer = await sharp(jpegBuffer)
-      .extract({
-        left: Math.round(left * imgW),
-        top: Math.round(top * imgH),
-        width: cropW,
-        height: cropH,
-      })
-      .jpeg({ quality: 90 })
-      .toBuffer();
+    const baseRegion = await region(bbox);
+    const wideRegion = await region(wideBox);
 
-    const dir = path.join(process.cwd(), "data", "cartridges");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    // Generate a few candidate crops — the user picks the best one in the UI
+    const variantDefs: { key: string; label: string; buf: Buffer }[] = [
+      { key: "auto", label: "Auto", buf: await trimBorders(baseRegion, { top: false, bottom: false, left: true, right: true }) },
+      { key: "full", label: "Full label", buf: baseRegion },
+      { key: "tight", label: "Tight", buf: await trimBorders(baseRegion, { top: true, bottom: true, left: true, right: true }) },
+      { key: "wide", label: "Wide", buf: await trimBorders(wideRegion, { top: false, bottom: false, left: true, right: true }) },
+    ];
 
-    const filename = `${gameId}_label_${Date.now()}.jpg`;
-    fs.writeFileSync(path.join(dir, filename), croppedBuffer);
-
-    // Clean up old label files for this game
-    const old = fs.readdirSync(dir).filter(
-      (f) => f.startsWith(`${gameId}_label_`) && f !== filename
+    const ts = Date.now();
+    // Remove leftover candidates/originals from a previous (un-confirmed) upload for this
+    // game, but keep the currently selected label (stable name, no _cand_/_orig_ marker).
+    const stale = fs.readdirSync(dir).filter(
+      (f) => f.startsWith(`${gameId}_`) && (f.includes("_cand_") || f.includes("_orig_"))
     );
-    for (const f of old) fs.unlinkSync(path.join(dir, f));
+    for (const f of stale) fs.unlinkSync(path.join(dir, f));
 
-    return NextResponse.json({ path: `/images/cartridges/${filename}` });
+    // Save the full (EXIF-corrected) upload so the user can re-crop it manually
+    const origName = `${gameId}_orig_${ts}.jpg`;
+    fs.writeFileSync(path.join(dir, origName), jpegBuffer);
+
+    const variants: { key: string; label: string; path: string }[] = [];
+    for (let i = 0; i < variantDefs.length; i++) {
+      const v = variantDefs[i];
+      const jpg = await sharp(v.buf).jpeg({ quality: 90 }).toBuffer();
+      const fn = `${gameId}_label_${ts}_cand_${i}.jpg`;
+      fs.writeFileSync(path.join(dir, fn), jpg);
+      variants.push({ key: v.key, label: v.label, path: `/images/cartridges/${fn}` });
+    }
+
+    return NextResponse.json({
+      variants,
+      original: `/images/cartridges/${origName}`,
+      bbox,
+    });
   } catch (err) {
     console.error("process-cartridge error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

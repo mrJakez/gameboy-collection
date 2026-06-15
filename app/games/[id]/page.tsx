@@ -4,6 +4,7 @@ import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CartridgeSVG from "@/app/components/CartridgeSVG";
+import CropEditor, { type Box } from "@/app/components/CropEditor";
 import {
   Game,
   STATUS_LABELS,
@@ -98,6 +99,10 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [saving, setSaving] = useState(false);
   const [processingLabel, setProcessingLabel] = useState(false);
   const [imageView, setImageView] = useState<"cartridge" | "cover">("cartridge");
+  const [variants, setVariants] = useState<{ key: string; label: string; path: string }[] | null>(null);
+  const [origImg, setOrigImg] = useState<string | null>(null);
+  const [detectedBox, setDetectedBox] = useState<Box | null>(null);
+  const [manualMode, setManualMode] = useState(false);
   const [form, setForm] = useState<Partial<Game>>({});
 
   const checkAuth = useCallback(async () => {
@@ -158,6 +163,60 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     await patch({ cartridgeImage: null });
   }
 
+  function closeChooser() {
+    setVariants(null);
+    setOrigImg(null);
+    setDetectedBox(null);
+    setManualMode(false);
+  }
+
+  async function uploadCartridgePhoto(file: File) {
+    setProcessingLabel(true);
+    closeChooser();
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("gameId", id);
+    const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
+    const data = await res.json();
+    setProcessingLabel(false);
+    if (data.variants?.length) {
+      setVariants(data.variants);
+      setOrigImg(data.original ?? null);
+      setDetectedBox(data.bbox ?? null);
+      setImageView("cartridge");
+    } else {
+      alert(data.error ?? "Processing failed");
+    }
+  }
+
+  async function chooseVariant(variantPath: string) {
+    setProcessingLabel(true);
+    const fd = new FormData();
+    fd.append("select", variantPath);
+    fd.append("gameId", id);
+    const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
+    const data = await res.json();
+    setProcessingLabel(false);
+    closeChooser();
+    if (data.path) await patch({ cartridgeImage: data.path });
+    else alert(data.error ?? "Selection failed");
+  }
+
+  async function confirmManualCrop(box: Box) {
+    if (!origImg) return;
+    setProcessingLabel(true);
+    const fd = new FormData();
+    fd.append("crop", JSON.stringify(box));
+    fd.append("original", origImg);
+    fd.append("gameId", id);
+    const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
+    const data = await res.json();
+    setProcessingLabel(false);
+    closeChooser();
+    if (data.path) await patch({ cartridgeImage: data.path });
+    else alert(data.error ?? "Crop failed");
+  }
+
   async function deleteGame() {
     if (!confirm(`Really delete "${game?.title}"?`)) return;
     await fetch(`/api/games/${id}`, { method: "DELETE" });
@@ -187,7 +246,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const statusColor = STATUS_COLORS[game.status];
   const hasCartridgeLabel = !!game.cartridgeImage;
   const hasLibraryImg = !!game.libraryImage;
-  const isLibraryImg = !game.cartridgeImage && hasLibraryImg;
 
   return (
     <div className="max-w-3xl">
@@ -310,18 +368,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (!file) return;
-                            setProcessingLabel(true);
-                            const fd = new FormData();
-                            fd.append("file", file);
-                            fd.append("gameId", id);
-                            const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
-                            const { path, error } = await res.json();
-                            setProcessingLabel(false);
-                            if (path) await patch({ cartridgeImage: path });
-                            else alert(error ?? "Processing failed");
+                            if (file) uploadCartridgePhoto(file);
                           }}
                         />
                       </>
@@ -359,18 +408,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (!file) return;
-                            setProcessingLabel(true);
-                            const fd = new FormData();
-                            fd.append("file", file);
-                            fd.append("gameId", id);
-                            const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
-                            const { path, error } = await res.json();
-                            setProcessingLabel(false);
-                            if (path) await patch({ cartridgeImage: path });
-                            else alert(error ?? "Processing failed");
+                            if (file) uploadCartridgePhoto(file);
                           }}
                         />
                       </label>
@@ -386,6 +426,62 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               )}
             </div>
+
+            {/* Variant chooser — pick the best crop after uploading a photo */}
+            {variants && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeChooser}>
+                <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  {manualMode && origImg && detectedBox ? (
+                    <>
+                      <h2 className="text-sm font-semibold text-zinc-100 mb-1">Adjust the crop</h2>
+                      <p className="text-xs text-zinc-500 mb-4">Drag the box and corners to frame the cover.</p>
+                      <CropEditor
+                        src={origImg}
+                        initial={detectedBox}
+                        busy={processingLabel}
+                        onCancel={() => setManualMode(false)}
+                        onConfirm={confirmManualCrop}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-sm font-semibold text-zinc-100 mb-1">Choose the best crop</h2>
+                      <p className="text-xs text-zinc-500 mb-4">Tap the version that frames the cover best.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {variants.map((v) => (
+                          <button
+                            key={v.key}
+                            onClick={() => chooseVariant(v.path)}
+                            disabled={processingLabel}
+                            className="group rounded-xl border border-zinc-700 hover:border-zinc-400 bg-zinc-800 p-2 transition-colors disabled:opacity-50"
+                          >
+                            <div className="aspect-square">
+                              <CartridgeSVG platform={game.platform} labelSrc={v.path} className="w-full h-full" />
+                            </div>
+                            <span className="block mt-1.5 text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">{v.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {origImg && detectedBox && (
+                        <button
+                          onClick={() => setManualMode(true)}
+                          disabled={processingLabel}
+                          className="mt-3 w-full py-2 rounded-lg text-sm font-medium text-zinc-300 border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                        >
+                          ✂️ Manual crop
+                        </button>
+                      )}
+                      <button
+                        onClick={closeChooser}
+                        className="mt-2 w-full py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Info */}
             <div className="flex-1 space-y-3">
