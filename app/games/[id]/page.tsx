@@ -263,7 +263,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
         <>
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
             {/* Image area */}
-            <div className="w-full sm:w-48 sm:shrink-0 max-w-[200px] mx-auto sm:mx-0">
+            <div className="w-full max-w-[92vw] sm:w-48 sm:max-w-[192px] sm:shrink-0 mx-auto sm:mx-0">
               {/* Toggle: show when library image exists (with or without cartridge) */}
               {hasLibraryImg && (
                 <div className="flex mb-2 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
