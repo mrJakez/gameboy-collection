@@ -97,6 +97,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [processingLabel, setProcessingLabel] = useState(false);
+  const [imageView, setImageView] = useState<"cartridge" | "cover">("cartridge");
   const [form, setForm] = useState<Partial<Game>>({});
 
   const checkAuth = useCallback(async () => {
@@ -108,7 +109,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     fetch(`/api/games/${id}`)
       .then((r) => r.json())
-      .then((data) => { setGame(data); setLoading(false); });
+      .then((data) => {
+        setGame(data);
+        setLoading(false);
+        if (!data.cartridgeImage && data.libraryImage) setImageView("cover");
+      });
     checkAuth();
   }, [id, checkAuth]);
 
@@ -180,8 +185,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
   const platformColor = PLATFORM_COLORS[game.platform];
   const statusColor = STATUS_COLORS[game.status];
-  const isLibraryImg = !game.cartridgeImage && !!game.libraryImage;
   const hasCartridgeLabel = !!game.cartridgeImage;
+  const hasLibraryImg = !!game.libraryImage;
+  const isLibraryImg = !game.cartridgeImage && hasLibraryImg;
 
   return (
     <div className="max-w-3xl">
@@ -258,69 +264,124 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
             {/* Image area */}
             <div className="w-full sm:w-48 sm:shrink-0 max-w-[200px] mx-auto sm:mx-0">
-              {/* Virtual cartridge or library cover */}
-              {hasCartridgeLabel ? (
-                <div className="flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded-xl aspect-square">
-                  <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
-                </div>
-              ) : (
-                <div className={`bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center ${
-                  isLibraryImg ? "aspect-[160/144]" : "aspect-[3/4]"
-                }`}>
-                  {isLibraryImg ? (
-                    <Image
-                      src={game.libraryImage!}
-                      alt={game.title}
-                      fill
-                      className="object-contain"
-                      style={{ imageRendering: "pixelated" }}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-zinc-600">
-                      <span className="text-5xl">🎮</span>
-                      <span className="text-xs font-mono">{game.platform}</span>
-                    </div>
-                  )}
+              {/* Toggle: show when library image exists (with or without cartridge) */}
+              {hasLibraryImg && (
+                <div className="flex mb-2 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setImageView("cartridge")}
+                    className={`flex-1 py-1 text-xs rounded-md transition-colors ${
+                      imageView === "cartridge"
+                        ? "bg-zinc-700 text-zinc-100"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    Cartridge
+                  </button>
+                  <button
+                    onClick={() => setImageView("cover")}
+                    className={`flex-1 py-1 text-xs rounded-md transition-colors ${
+                      imageView === "cover"
+                        ? "bg-zinc-700 text-zinc-100"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    Cover
+                  </button>
                 </div>
               )}
 
-              {/* Image actions */}
-              {authenticated && (
-                <div className="mt-2 flex flex-col items-center gap-1">
+              {/* Image display */}
+              {(!hasLibraryImg || imageView === "cartridge") ? (
+                /* Cartridge view */
+                hasCartridgeLabel ? (
+                  <div className="flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded-xl aspect-square">
+                    <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
+                  </div>
+                ) : (
+                  /* No cartridge image — placeholder with + button when authenticated */
+                  <label className={`bg-zinc-800 border border-zinc-700 rounded-xl aspect-square flex flex-col items-center justify-center gap-2 text-zinc-600 ${authenticated ? "cursor-pointer hover:border-zinc-500 hover:bg-zinc-700/40 transition-colors group" : ""}`}>
+                    {processingLabel ? (
+                      <span className="text-xs text-zinc-500 animate-pulse">Extracting label…</span>
+                    ) : authenticated ? (
+                      <>
+                        <span className="text-3xl text-zinc-500 group-hover:text-zinc-300 transition-colors">+</span>
+                        <span className="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors">Add cartridge photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setProcessingLabel(true);
+                            const fd = new FormData();
+                            fd.append("file", file);
+                            fd.append("gameId", id);
+                            const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
+                            const { path, error } = await res.json();
+                            setProcessingLabel(false);
+                            if (path) await patch({ cartridgeImage: path });
+                            else alert(error ?? "Processing failed");
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-5xl">🎮</span>
+                        <span className="text-xs font-mono">{game.platform}</span>
+                      </>
+                    )}
+                  </label>
+                )
+              ) : (
+                /* Cover view */
+                <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center aspect-[160/144]">
+                  <Image
+                    src={game.libraryImage!}
+                    alt={game.title}
+                    fill
+                    className="object-contain"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                </div>
+              )}
+
+              {/* Subtle cartridge image actions (replace / remove) */}
+              {authenticated && hasCartridgeLabel && (!hasLibraryImg || imageView === "cartridge") && (
+                <div className="mt-1.5 flex items-center justify-center gap-3">
                   {processingLabel ? (
-                    <span className="text-xs text-zinc-500 animate-pulse">Extracting label…</span>
+                    <span className="text-xs text-zinc-600 animate-pulse">Extracting label…</span>
                   ) : (
-                    <label className="block text-center cursor-pointer">
-                      <span className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
-                        {game.cartridgeImage ? "Replace cartridge photo" : "📷 Upload cartridge photo"}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setProcessingLabel(true);
-                          const fd = new FormData();
-                          fd.append("file", file);
-                          fd.append("gameId", id);
-                          const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
-                          const { path, error } = await res.json();
-                          setProcessingLabel(false);
-                          if (path) await patch({ cartridgeImage: path });
-                          else alert(error ?? "Processing failed");
-                        }}
-                      />
-                    </label>
-                  )}
-                  {game.cartridgeImage && !processingLabel && (
-                    <button
-                      onClick={deleteCartridgeImage}
-                      className="text-xs text-red-700 hover:text-red-500 transition-colors"
-                    >
-                      Remove cartridge label
-                    </button>
+                    <>
+                      <label className="cursor-pointer">
+                        <span className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">Replace</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setProcessingLabel(true);
+                            const fd = new FormData();
+                            fd.append("file", file);
+                            fd.append("gameId", id);
+                            const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
+                            const { path, error } = await res.json();
+                            setProcessingLabel(false);
+                            if (path) await patch({ cartridgeImage: path });
+                            else alert(error ?? "Processing failed");
+                          }}
+                        />
+                      </label>
+                      <span className="text-zinc-800 text-[11px]">·</span>
+                      <button
+                        onClick={deleteCartridgeImage}
+                        className="text-[11px] text-zinc-700 hover:text-red-600 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </>
                   )}
                 </div>
               )}

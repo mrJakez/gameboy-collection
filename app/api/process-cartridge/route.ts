@@ -12,7 +12,8 @@ async function toJpegBuffer(buffer: Buffer, mimeType: string): Promise<Buffer> {
     const rgb = await heicConvert({ buffer, format: "JPEG", quality: 0.85 });
     return Buffer.from(rgb);
   }
-  return sharp(buffer, { failOn: "none" }).jpeg({ quality: 85 }).toBuffer();
+  // .rotate() with no args applies EXIF orientation so iPhone photos aren't sideways
+  return sharp(buffer, { failOn: "none" }).rotate().jpeg({ quality: 85 }).toBuffer();
 }
 
 export async function POST(req: NextRequest) {
