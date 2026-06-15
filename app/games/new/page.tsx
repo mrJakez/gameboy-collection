@@ -6,7 +6,7 @@ import Image from "next/image";
 import { GameStatus, Platform, STATUS_LABELS } from "@/lib/games";
 
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
-const PLATFORMS: Platform[] = ["GB", "GBC", "GBA", "GBP"];
+const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 
 interface LibraryEntry {
   title: string;

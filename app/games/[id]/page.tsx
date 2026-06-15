@@ -17,7 +17,7 @@ import {
 } from "@/lib/games";
 
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
-const PLATFORMS: Platform[] = ["GB", "GBC", "GBA", "GBP"];
+const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 
 function StatBox({ label, value }: { label: string; value: string | number }) {
   return (
@@ -132,6 +132,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
       platform: game.platform,
       notes: game.notes,
       purchasePrice: game.purchasePrice ?? "",
+      createdAt: game.createdAt ? game.createdAt.slice(0, 10) : "",
     });
     setEditing(true);
   }
@@ -298,6 +299,12 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             <input type="text" value={(form.purchasePrice as string) ?? ""}
               onChange={(e) => set("purchasePrice", e.target.value)}
               placeholder="e.g. €12.50" className={inputCls} />
+          </Field>
+
+          <Field label="Added">
+            <input type="date" value={(form.createdAt as string) ?? ""}
+              onChange={(e) => set("createdAt", e.target.value ? new Date(e.target.value).toISOString() : null)}
+              className={inputCls} />
           </Field>
 
           <Field label="Notes">
@@ -554,7 +561,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           {/* Stats */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
             <StatBox label="Play time" value={formatPlaytime(game.playtime)} />
-            <StatBox label="Sessions" value={game.sessions} />
+            <StatBox label="Added" value={game.createdAt ? (() => { const d = new Date(game.createdAt!); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const yy = String(d.getFullYear()).slice(-2); return `${dd}.${mm}.${yy}`; })() : "—"} />
             <StatBox label="Last played"
               value={game.lastPlayed ? (() => { const d = new Date(game.lastPlayed!); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const yy = String(d.getFullYear()).slice(-2); return `${dd}.${mm}.${yy}`; })() : "—"} />
           </div>

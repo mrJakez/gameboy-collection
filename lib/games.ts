@@ -31,6 +31,7 @@ export interface Game {
   romCrc: string | null; // ROM CRC32 from Analog Pocket
   pocketData: PocketData | null;
   purchasePrice: string | null;
+  createdAt: string | null;
 }
 
 export function formatPlaytime(minutes: number): string {

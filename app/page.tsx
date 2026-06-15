@@ -7,7 +7,7 @@ import Image from "next/image";
 import CartridgeSVG from "@/app/components/CartridgeSVG";
 
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
-const PLATFORMS: Platform[] = ["GB", "GBC", "GBA", "GBP"];
+const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 
 function StarRating({ rating }: { rating: number | null }) {
   if (!rating) return null;
