@@ -451,7 +451,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             <StatBox label="Play time" value={formatPlaytime(game.playtime)} />
             <StatBox label="Sessions" value={game.sessions} />
             <StatBox label="Last played"
-              value={game.lastPlayed ? (() => { const d = new Date(game.lastPlayed!); return `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`; })() : "—"} />
+              value={game.lastPlayed ? (() => { const d = new Date(game.lastPlayed!); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const yy = String(d.getFullYear()).slice(-2); return `${dd}.${mm}.${yy}`; })() : "—"} />
           </div>
 
           {/* Notes */}

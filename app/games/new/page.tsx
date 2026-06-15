@@ -121,7 +121,7 @@ export default function NewGamePage() {
     title: "",
     developer: "",
     publisher: "",
-    year: new Date().getFullYear(),
+    year: 0,
     platform: "GB" as Platform,
     status: "backlog" as GameStatus,
     notes: "",
@@ -247,8 +247,8 @@ export default function NewGamePage() {
                 <label className="block text-xs text-zinc-500 mb-1.5">Year</label>
                 <input
                   type="number"
-                  value={form.year}
-                  onChange={(e) => set("year", parseInt(e.target.value))}
+                  value={form.year || ""}
+                  onChange={(e) => set("year", parseInt(e.target.value) || 0)}
                   min={1989} max={2010}
                   className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-600 transition-colors"
                 />

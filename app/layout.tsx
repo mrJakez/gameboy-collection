@@ -51,7 +51,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-[11px] text-zinc-800 font-mono">
                 {process.env.NEXT_PUBLIC_BUILD_SHA && <>#{process.env.NEXT_PUBLIC_BUILD_SHA}</>}
                 {process.env.NEXT_PUBLIC_BUILD_SHA && process.env.NEXT_PUBLIC_BUILD_TIME && <> · </>}
-                {process.env.NEXT_PUBLIC_BUILD_TIME && <>{process.env.NEXT_PUBLIC_BUILD_TIME.replace("T", " ").replace("Z", " UTC")}</>}
+                {process.env.NEXT_PUBLIC_BUILD_TIME && (() => {
+                  const d = new Date(process.env.NEXT_PUBLIC_BUILD_TIME!);
+                  return <>{d.toLocaleString("de-DE", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })} MEZ</>;
+                })()}
               </span>
             </footer>
           )}
