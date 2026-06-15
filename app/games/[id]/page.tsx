@@ -74,7 +74,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputCls = "w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 transition-colors";
+const inputCls = "w-full h-10 px-3 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 transition-colors";
+const selectCls = `${inputCls} appearance-none`;
 
 const URL_RE = /https?:\/\/[^\s<>"]+/g;
 
@@ -150,7 +151,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
       platform: game.platform,
       notes: game.notes,
       purchasePrice: game.purchasePrice ?? "",
-      createdAt: game.createdAt ? game.createdAt.slice(0, 10) : "",
+      createdAt: game.createdAt ? (() => { const d = new Date(game.createdAt!); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); return `${dd}.${mm}.${d.getFullYear()}`; })() : "",
     });
     setEditing(true);
   }
@@ -307,7 +308,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </Field>
             <Field label="System" >
               <select value={form.platform ?? "GB"} onChange={(e) => set("platform", e.target.value)}
-                className={inputCls}>
+                className={selectCls}>
                 {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </Field>

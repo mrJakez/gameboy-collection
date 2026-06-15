@@ -35,7 +35,7 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
 
   useEffect(() => {
     if (justSelected.current) { justSelected.current = false; return; }
-    if (!query && !open) return;
+    if (!query) { setResults([]); setExisting([]); return; }
     setLoading(true);
     const t = setTimeout(async () => {
       const [libRes, gamesRes] = await Promise.all([
@@ -45,11 +45,10 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
       const [libData, gamesData] = await Promise.all([libRes.json(), gamesRes.json()]);
       setResults(libData);
       setExisting(Array.isArray(gamesData) ? gamesData.slice(0, 5) : []);
-      setOpen(true);
       setLoading(false);
     }, 150);
     return () => clearTimeout(t);
-  }, [query, open]);
+  }, [query]);
 
   // Close on outside click
   useEffect(() => {
@@ -174,13 +173,12 @@ export default function NewGamePage() {
   const [selectedLibEntry, setSelectedLibEntry] = useState<LibraryEntry | null>(null);
   const [form, setForm] = useState({
     title: "",
-    developer: "",
-    publisher: "",
     year: 0,
     platform: "GB" as Platform,
     status: "backlog" as GameStatus,
     notes: "",
     purchasePrice: "",
+    addedDate: "",
     romCrc: null as string | null,
   });
 
@@ -200,8 +198,18 @@ export default function NewGamePage() {
     if (!form.title) return;
     setSaving(true);
 
+    let createdAt: string | null = null;
+    const av = form.addedDate.trim();
+    if (av) {
+      const m = av.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      if (m) createdAt = new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`).toISOString();
+    }
+
+    const { addedDate, ...formRest } = form;
+    (formRest as Record<string, unknown>).developer = "";
+    (formRest as Record<string, unknown>).publisher = "";
     const payload = {
-      ...form,
+      ...formRest,
       genre: [],
       cartridgeImage: null,
       libraryImage: selectedLibEntry?.libraryImage ?? null,
@@ -210,6 +218,7 @@ export default function NewGamePage() {
       rating: null,
       pocketData: null,
       purchasePrice: form.purchasePrice || null,
+      ...(createdAt ? { createdAt } : {}),
     };
 
     const res = await fetch("/api/games", {
@@ -222,7 +231,7 @@ export default function NewGamePage() {
   }
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl mx-auto">
       <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors mb-6 inline-block">
         ← Back
       </a>
@@ -273,36 +282,13 @@ export default function NewGamePage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1.5">Developer</label>
-                <input
-                  type="text"
-                  value={form.developer}
-                  onChange={(e) => set("developer", e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
-                  placeholder="Game Freak"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1.5">Publisher</label>
-                <input
-                  type="text"
-                  value={form.publisher}
-                  onChange={(e) => set("publisher", e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
-                  placeholder="Nintendo"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
                 <label className="block text-xs text-zinc-500 mb-1.5">Year</label>
                 <input
                   type="number"
                   value={form.year || ""}
                   onChange={(e) => set("year", parseInt(e.target.value) || 0)}
                   min={1989} max={2010}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-600 transition-colors"
+                  className="w-full h-11 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-600 transition-colors"
                 />
               </div>
               <div>
@@ -311,7 +297,7 @@ export default function NewGamePage() {
                 <select
                   value={form.platform}
                   onChange={(e) => set("platform", e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
+                  className="w-full h-11 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors appearance-none"
                 >
                   {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
@@ -336,6 +322,17 @@ export default function NewGamePage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1.5">Added (DD.MM.YYYY)</label>
+              <input
+                type="text"
+                value={form.addedDate}
+                onChange={(e) => set("addedDate", e.target.value)}
+                placeholder="DD.MM.YYYY"
+                className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+              />
             </div>
 
             <div>
