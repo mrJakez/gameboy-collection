@@ -375,7 +375,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="flex mb-2 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
                   <button
                     onClick={() => setImageView("cartridge")}
-                    className={`flex-1 py-1 text-xs rounded-md transition-colors ${
+                    className={`flex-1 py-2 sm:py-1 text-xs rounded-md transition-colors ${
                       imageView === "cartridge"
                         ? "bg-zinc-700 text-zinc-100"
                         : "text-zinc-500 hover:text-zinc-300"
@@ -385,7 +385,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                   </button>
                   <button
                     onClick={() => setImageView("cover")}
-                    className={`flex-1 py-1 text-xs rounded-md transition-colors ${
+                    className={`flex-1 py-2 sm:py-1 text-xs rounded-md transition-colors ${
                       imageView === "cover"
                         ? "bg-zinc-700 text-zinc-100"
                         : "text-zinc-500 hover:text-zinc-300"

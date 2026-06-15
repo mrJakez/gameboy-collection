@@ -27,23 +27,22 @@ function StarRating({ rating }: { rating: number | null }) {
   );
 }
 
-function GameCard({ game, urlSuffix }: { game: Game; urlSuffix: string }) {
+function GameCard({ game, urlSuffix, viewMode }: { game: Game; urlSuffix: string; viewMode: "cartridge" | "screenshot" }) {
   const statusColor = STATUS_COLORS[game.status];
   const platformColor = PLATFORM_COLORS[game.platform];
 
-  const isLibraryImg = !game.cartridgeImage && !!game.libraryImage;
-  const hasCartridgeLabel = !!game.cartridgeImage;
+  const showCartridge = viewMode === "cartridge" && !!game.cartridgeImage;
+  const showLibrary = viewMode === "screenshot" ? !!game.libraryImage : (!game.cartridgeImage && !!game.libraryImage);
 
   return (
     <a href={`/games/${game.id}${urlSuffix}`} className="group block h-full">
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 hover:bg-zinc-800/60 transition-all duration-200 h-full flex flex-col">
-        {/* Uniform image area (cartridge aspect) — image fills edge-to-edge, no gray letterbox */}
         <div className="bg-zinc-900 relative flex items-center justify-center overflow-hidden aspect-[940/1064]">
-          {hasCartridgeLabel ? (
+          {showCartridge ? (
             <div className="absolute inset-0 p-1.5 group-hover:scale-105 transition-transform duration-300">
               <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
             </div>
-          ) : isLibraryImg ? (
+          ) : showLibrary ? (
             <Image
               src={game.libraryImage!}
               alt={game.title}
@@ -143,6 +142,10 @@ function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"cartridge" | "screenshot">(() => {
+    if (typeof window === "undefined") return "cartridge";
+    return (localStorage.getItem("viewMode") as "cartridge" | "screenshot") ?? "cartridge";
+  });
   // Local input value — decoupled from URL so typing never triggers a router re-render
   const [inputValue, setInputValue] = useState(query);
 
@@ -218,7 +221,7 @@ function HomePage() {
               <button
                 type="button"
                 onPointerDown={(e) => { e.preventDefault(); setInputValue(""); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-full px-3 flex items-center text-zinc-500 hover:text-zinc-300 transition-colors"
                 aria-label="Clear search"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -288,6 +291,23 @@ function HomePage() {
         </div>
       </div>
 
+      {/* View toggle */}
+      <div className="flex justify-end mb-3">
+        <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 gap-0.5">
+          {(["cartridge", "screenshot"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => { setViewMode(mode); localStorage.setItem("viewMode", mode); }}
+              className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+                viewMode === mode ? "bg-zinc-700 text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {mode === "cartridge" ? "Cartridge" : "Screenshot"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {!loading && (
         <p className="text-xs text-zinc-600 mb-4">
           {filtered.length} {filtered.length === 1 ? "game" : "games"}
@@ -320,7 +340,7 @@ function HomePage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 [grid-auto-rows:1fr]">
           {filtered.map((game) => (
-            <GameCard key={game.id} game={game} urlSuffix={searchParams.toString() ? `?back=${encodeURIComponent("/?"+searchParams.toString())}` : ""} />
+            <GameCard key={game.id} game={game} urlSuffix={searchParams.toString() ? `?back=${encodeURIComponent("/?"+searchParams.toString())}` : ""} viewMode={viewMode} />
           ))}
         </div>
       )}
