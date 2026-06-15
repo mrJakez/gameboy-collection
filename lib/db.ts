@@ -3,6 +3,18 @@ import path from "path";
 import type { Game } from "./games";
 
 const DATA_FILE = path.join(process.cwd(), "data", "games.json");
+const DELETED_FILE = path.join(process.cwd(), "data", "deleted_games.json");
+
+export interface DeletedGame { id: string; title: string; romCrc: string | null; deletedAt: string; }
+
+export function readDeleted(): DeletedGame[] {
+  if (!fs.existsSync(DELETED_FILE)) return [];
+  return JSON.parse(fs.readFileSync(DELETED_FILE, "utf-8"));
+}
+
+function writeDeleted(list: DeletedGame[]): void {
+  fs.writeFileSync(DELETED_FILE, JSON.stringify(list, null, 2));
+}
 
 let migrationDone = false;
 
@@ -69,8 +81,13 @@ export function updateGame(id: string, data: Partial<Game>): Game | null {
 
 export function deleteGame(id: string): boolean {
   const games = readGames();
-  const filtered = games.filter((g) => g.id !== id);
-  if (filtered.length === games.length) return false;
-  writeGames(filtered);
+  const game = games.find((g) => g.id === id);
+  if (!game) return false;
+  writeGames(games.filter((g) => g.id !== id));
+  const deleted = readDeleted();
+  if (!deleted.find((d) => d.id === id)) {
+    deleted.push({ id, title: game.title, romCrc: game.romCrc ?? null, deletedAt: new Date().toISOString() });
+    writeDeleted(deleted);
+  }
   return true;
 }

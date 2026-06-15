@@ -23,10 +23,18 @@ interface ExistingGame {
   cartridgeImage: string | null;
 }
 
+interface DeletedGame {
+  id: string;
+  title: string;
+  romCrc: string | null;
+  deletedAt: string;
+}
+
 function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LibraryEntry[]>([]);
   const [existing, setExisting] = useState<ExistingGame[]>([]);
+  const [deleted, setDeleted] = useState<DeletedGame[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,16 +43,20 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
 
   useEffect(() => {
     if (justSelected.current) { justSelected.current = false; return; }
-    if (!query) { setResults([]); setExisting([]); return; }
+    if (!query) { setResults([]); setExisting([]); setDeleted([]); return; }
     setLoading(true);
     const t = setTimeout(async () => {
-      const [libRes, gamesRes] = await Promise.all([
+      const [libRes, gamesRes, deletedRes] = await Promise.all([
         fetch(`/api/library?q=${encodeURIComponent(query)}`),
         fetch(`/api/games?q=${encodeURIComponent(query)}`),
+        fetch("/api/deleted"),
       ]);
-      const [libData, gamesData] = await Promise.all([libRes.json(), gamesRes.json()]);
+      const [libData, gamesData, deletedData] = await Promise.all([libRes.json(), gamesRes.json(), deletedRes.json()]);
+      const allDeleted: DeletedGame[] = Array.isArray(deletedData) ? deletedData : [];
+      const q = query.toLowerCase();
       setResults(libData);
       setExisting(Array.isArray(gamesData) ? gamesData.slice(0, 5) : []);
+      setDeleted(allDeleted.filter((d) => d.title.toLowerCase().includes(q)));
       setLoading(false);
     }, 150);
     return () => clearTimeout(t);
@@ -68,7 +80,7 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
     setOpen(false);
   }
 
-  const hasResults = results.length > 0 || existing.length > 0;
+  const hasResults = results.length > 0 || existing.length > 0 || deleted.length > 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -117,6 +129,26 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
                   </a>
                 );
               })}
+              {(results.length > 0 || deleted.length > 0) && <div className="border-t border-zinc-800 mt-1" />}
+            </>
+          )}
+
+          {/* Previously deleted */}
+          {deleted.length > 0 && (
+            <>
+              <p className="px-3 pt-2.5 pb-1 text-[10px] font-medium text-red-500/70 uppercase tracking-wider">Previously deleted</p>
+              {deleted.map((d) => (
+                <div key={d.id} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
+                  <div className="w-10 h-10 bg-zinc-800 rounded-lg shrink-0 flex items-center justify-center">
+                    <span className="text-xl">🗑</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-400 truncate">{d.title}</p>
+                    <p className="text-xs text-zinc-600">Deleted · can be re-added manually</p>
+                  </div>
+                  <span className="text-[10px] text-red-500/60 border border-red-500/20 rounded px-1.5 py-0.5 shrink-0">Deleted</span>
+                </div>
+              ))}
               {results.length > 0 && <div className="border-t border-zinc-800 mt-1" />}
             </>
           )}

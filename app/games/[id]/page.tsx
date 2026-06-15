@@ -350,7 +350,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
           <Field label="Notes">
             <textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)}
-              rows={3} className={`${inputCls} resize-none`} />
+              rows={6} className={`${inputCls} resize-y h-auto py-2`} />
           </Field>
 
           <div className="flex gap-2 pt-2">
@@ -361,6 +361,12 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             <button onClick={() => setEditing(false)}
               className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
               Cancel
+            </button>
+          </div>
+
+          <div className="border-t border-zinc-800 pt-4 mt-2">
+            <button onClick={deleteGame} className="text-xs text-red-600 hover:text-red-400 transition-colors">
+              Delete game
             </button>
           </div>
         </div>
@@ -604,14 +610,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          {/* Delete */}
-          {authenticated && (
-            <div className="border-t border-zinc-800 pt-6">
-              <button onClick={deleteGame} className="text-xs text-red-600 hover:text-red-400 transition-colors">
-                Delete game
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

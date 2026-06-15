@@ -229,6 +229,13 @@ def scan_roms(roms_dir: Path) -> dict[str, dict]:
     return db
 
 
+DELETED_FILE = PROJECT_ROOT / "data" / "deleted_games.json"
+
+def load_deleted_crcs() -> set:
+    if DELETED_FILE.exists():
+        return {d["romCrc"] for d in json.loads(DELETED_FILE.read_text()) if d.get("romCrc")}
+    return set()
+
 def load_games() -> list[dict]:
     if DATA_FILE.exists():
         return json.loads(DATA_FILE.read_text())
@@ -389,11 +396,16 @@ def main():
     print()
     print("── [4/5] Spielstand zusammenführen ───────────────────")
     games  = load_games()
+    deleted_crcs = load_deleted_crcs()
     added   = 0
     updated = 0
+    skipped = 0
 
     for pg in pocket_games:
         crc      = pg["rom_crc"]
+        if crc in deleted_crcs:
+            skipped += 1
+            continue
         lib_crc  = pg["lib_crc"]
         pt       = playtimes.get(crc, {})
         playtime_mins = pt.get("minutes", 0)
@@ -466,7 +478,7 @@ def main():
     print()
     print("──────────────────────────────────────────────────────")
     print(f"   {n_lib_bins} Library-Bilder  ·  {lib_converted} neu konvertiert")
-    print(f"   {len(pocket_games)} gespielte Spiele  ·  {added} neu  ·  {updated} aktualisiert")
+    print(f"   {len(pocket_games)} gespielte Spiele  ·  {added} neu  ·  {updated} aktualisiert  ·  {skipped} übersprungen (gelöscht)")
     if args.dry_run:
         print("   (dry-run – nichts geschrieben)")
     print("──────────────────────────────────────────────────────")
