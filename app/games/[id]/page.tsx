@@ -19,13 +19,31 @@ import {
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
 const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 
-function StatBox({ label, value }: { label: string; value: string | number }) {
+function StatBox({ label, value, onClick, active }: { label: string; value: string | number; onClick?: () => void; active?: boolean }) {
+  const base = "bg-zinc-900 border rounded-xl p-4 transition-all";
+  const cls = onClick
+    ? `${base} cursor-pointer hover:bg-zinc-800/60 ${active ? "border-orange-500/40 bg-orange-500/10" : "border-zinc-800"}`
+    : `${base} border-zinc-800`;
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+    <div className={cls} onClick={onClick}>
       <div className="text-xl font-bold text-zinc-100">{value}</div>
       <div className="text-xs text-zinc-500 mt-0.5">{label}</div>
     </div>
   );
+}
+
+function formatEuro(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const num = parseFloat(raw.replace(",", ".").replace(/[^0-9.]/g, ""));
+  if (isNaN(num)) return raw;
+  return "€ " + num.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function normalizePrice(input: string): string | null {
+  const cleaned = input.trim().replace(/[^0-9,.-]/g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  if (isNaN(num)) return null;
+  return num.toFixed(2);
 }
 
 function StarRatingInput({ value, onChange }: { value: number | null; onChange: (v: number) => void }) {
@@ -295,10 +313,22 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </Field>
           </div>
 
-          <Field label="Spent">
-            <input type="text" value={(form.purchasePrice as string) ?? ""}
-              onChange={(e) => set("purchasePrice", e.target.value)}
-              placeholder="e.g. €12.50" className={inputCls} />
+          <Field label="Spent (€)">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">€</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={(form.purchasePrice as string) ?? ""}
+                onChange={(e) => set("purchasePrice", e.target.value)}
+                onBlur={(e) => {
+                  const normalized = normalizePrice(e.target.value);
+                  set("purchasePrice", normalized);
+                }}
+                placeholder="12.50"
+                className={`${inputCls} pl-7`}
+              />
+            </div>
           </Field>
 
           <Field label="Added (DD.MM.YYYY)">
@@ -518,7 +548,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 {game.publisher && <p><span className="text-zinc-600">Publisher</span>{" "}{game.publisher}</p>}
                 {game.year > 0 && <p><span className="text-zinc-600">Year</span>{" "}{game.year}</p>}
                 {game.genre.length > 0 && <p><span className="text-zinc-600">Genre</span>{" "}{game.genre.join(", ")}</p>}
-                {game.purchasePrice && <p><span className="text-zinc-600">Spent</span>{" "}{game.purchasePrice}</p>}
+                {game.purchasePrice && <p><span className="text-zinc-600">Spent</span>{" "}{formatEuro(game.purchasePrice)}</p>}
               </div>
 
               <div>
@@ -526,21 +556,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 <StarRatingInput value={game.rating} onChange={(v) => patch({ rating: v })} />
               </div>
 
-              {authenticated && OWNED_STATUSES.includes(game.status) && (
-                <div>
-                  <p className="text-xs text-zinc-600 mb-1">Lent out</p>
-                  <button
-                    onClick={() => patch({ lent: !game.lent })}
-                    className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
-                      game.lent
-                        ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
-                        : "border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
-                    }`}
-                  >
-                    {game.lent ? "Yes — mark as returned" : "No — mark as lent out"}
-                  </button>
-                </div>
-              )}
 
               <div>
                 <p className="text-xs text-zinc-600 mb-1">Status</p>
@@ -570,10 +585,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
-            <StatBox label="Play time" value={formatPlaytime(game.playtime)} />
             <StatBox label="Added" value={game.createdAt ? (() => { const d = new Date(game.createdAt!); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const yy = String(d.getFullYear()).slice(-2); return `${dd}.${mm}.${yy}`; })() : "—"} />
-            <StatBox label="Last played"
-              value={game.lastPlayed ? (() => { const d = new Date(game.lastPlayed!); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const yy = String(d.getFullYear()).slice(-2); return `${dd}.${mm}.${yy}`; })() : "—"} />
+            <StatBox label="Play time" value={formatPlaytime(game.playtime)} />
+            <StatBox
+              label="Lent out"
+              value={game.lent ? "✓" : "—"}
+              onClick={authenticated && OWNED_STATUSES.includes(game.status) ? () => patch({ lent: !game.lent }) : undefined}
+              active={game.lent}
+            />
           </div>
 
           {/* Notes */}

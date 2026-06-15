@@ -3,9 +3,6 @@ export type Platform = "GB" | "GBC" | "GBA" | "GBP";
 
 export interface PocketData {
   playtimeSeconds: number;
-  sessions: number;
-  lastPlayed: string | null;
-  firstPlayed: string | null;
   saveExists: boolean;
 }
 
@@ -22,9 +19,6 @@ export interface Game {
   libraryImage: string | null;    // auto from Analog Pocket library
   coverImage: string | null;
   playtime: number; // minutes
-  sessions: number;
-  lastPlayed: string | null;
-  firstPlayed: string | null;
   notes: string;
   rating: number | null; // 1-5
   lent: boolean; // currently lent out to someone

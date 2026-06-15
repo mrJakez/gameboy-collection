@@ -4,13 +4,37 @@ import type { Game } from "./games";
 
 const DATA_FILE = path.join(process.cwd(), "data", "games.json");
 
+let migrationDone = false;
+
+function migrateGames(games: Game[]): Game[] {
+  let dirty = false;
+  const migrated = games.map((g: Game & { lastPlayed?: string | null; firstPlayed?: string | null; sessions?: number }) => {
+    const { lastPlayed, firstPlayed, sessions, ...rest } = g;
+    if (!rest.createdAt && lastPlayed) {
+      rest.createdAt = lastPlayed;
+      dirty = true;
+    }
+    if (lastPlayed !== undefined || firstPlayed !== undefined || sessions !== undefined) dirty = true;
+    return rest as Game;
+  });
+  if (dirty) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(migrated, null, 2));
+  }
+  return migrated;
+}
+
 export function readGames(): Game[] {
   if (!fs.existsSync(DATA_FILE)) {
     fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2));
     return [];
   }
   const raw = fs.readFileSync(DATA_FILE, "utf-8");
-  return JSON.parse(raw);
+  const games = JSON.parse(raw);
+  if (!migrationDone) {
+    migrationDone = true;
+    return migrateGames(games);
+  }
+  return games;
 }
 
 export function writeGames(games: Game[]): void {

@@ -207,9 +207,6 @@ export default function NewGamePage() {
       libraryImage: selectedLibEntry?.libraryImage ?? null,
       coverImage: null,
       playtime: 0,
-      sessions: 0,
-      lastPlayed: null,
-      firstPlayed: null,
       rating: null,
       pocketData: null,
       purchasePrice: form.purchasePrice || null,
@@ -342,14 +339,24 @@ export default function NewGamePage() {
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-500 mb-1.5">Spent</label>
-              <input
-                type="text"
-                value={form.purchasePrice}
-                onChange={(e) => set("purchasePrice", e.target.value)}
-                className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
-                placeholder="e.g. €12.50"
-              />
+              <label className="block text-xs text-zinc-500 mb-1.5">Spent (€)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">€</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.purchasePrice}
+                  onChange={(e) => set("purchasePrice", e.target.value)}
+                  onBlur={(e) => {
+                    const cleaned = e.target.value.trim().replace(/[^0-9,.-]/g, "").replace(",", ".");
+                    const num = parseFloat(cleaned);
+                    if (!isNaN(num)) set("purchasePrice", num.toFixed(2));
+                    else if (!e.target.value.trim()) set("purchasePrice", "");
+                  }}
+                  className="w-full pl-7 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+                  placeholder="12.50"
+                />
+              </div>
             </div>
 
             <div>

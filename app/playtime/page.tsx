@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Game, STATUS_COLORS, STATUS_LABELS, PLATFORM_COLORS, formatPlaytime } from "@/lib/games";
 
-type SortKey = "playtime" | "title" | "lastPlayed" | "platform";
+type SortKey = "playtime" | "title" | "platform";
 
 function BarChart({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
@@ -43,11 +43,6 @@ function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: num
         <div className="flex items-center gap-2 mt-0.5">
           <span className={`text-xs font-mono px-1 rounded ${platformColor}`}>{game.platform}</span>
           <span className={`text-xs px-1.5 py-0.5 rounded-full border ${statusColor}`}>{STATUS_LABELS[game.status]}</span>
-          {game.lastPlayed && (
-            <span className="hidden sm:inline text-xs text-zinc-600">
-              last played {new Date(game.lastPlayed).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-            </span>
-          )}
         </div>
       </div>
 
@@ -120,7 +115,6 @@ export default function PlaytimePage() {
       let cmp = 0;
       if (sortKey === "playtime") cmp = a.playtime - b.playtime;
       else if (sortKey === "title") cmp = a.title.localeCompare(b.title);
-      else if (sortKey === "lastPlayed") cmp = (a.lastPlayed ?? "").localeCompare(b.lastPlayed ?? "");
       else if (sortKey === "platform") cmp = a.platform.localeCompare(b.platform);
       return sortAsc ? cmp : -cmp;
     });
@@ -162,7 +156,6 @@ export default function PlaytimePage() {
         <span className="text-xs text-zinc-600">Sort:</span>
         <SortBtn k="playtime" label="Play time" />
         <SortBtn k="title" label="Name" />
-        <SortBtn k="lastPlayed" label="Last played" />
         <SortBtn k="platform" label="System" />
         <div className="ml-auto">
           <button

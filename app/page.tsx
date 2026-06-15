@@ -9,6 +9,13 @@ import CartridgeSVG from "@/app/components/CartridgeSVG";
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
 const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 
+function formatEuro(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const num = parseFloat(raw.replace(",", ".").replace(/[^0-9.]/g, ""));
+  if (isNaN(num)) return raw;
+  return "€ " + num.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function StarRating({ rating }: { rating: number | null }) {
   if (!rating) return null;
   return (
@@ -78,7 +85,7 @@ function GameCard({ game, urlSuffix }: { game: Game; urlSuffix: string }) {
               <span className="text-xs text-zinc-500 font-mono">{formatPlaytime(game.playtime)}</span>
             )}
             {game.playtime === 0 && game.purchasePrice && (
-              <span className="text-xs text-zinc-400">{game.purchasePrice}</span>
+              <span className="text-xs text-zinc-400">{formatEuro(game.purchasePrice)}</span>
             )}
           </div>
         </div>

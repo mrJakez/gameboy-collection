@@ -397,7 +397,6 @@ def main():
         lib_crc  = pg["lib_crc"]
         pt       = playtimes.get(crc, {})
         playtime_mins = pt.get("minutes", 0)
-        last_played   = pt.get("last_played")
 
         # Image URL uses lib_crc (consistent with Library filename)
         out_png = LIBRARY_DIR / f"{lib_crc}.png"
@@ -428,8 +427,6 @@ def main():
                 print(f"   ⚠️  Reset erkannt: {pg['title']} "
                       f"(gespeichert {stored_mins}m + Pocket {playtime_mins}m = {merged}m)")
 
-            if last_played and (not existing.get("lastPlayed") or last_played > existing["lastPlayed"]):
-                existing["lastPlayed"] = last_played; changed = True
             if lib_image_url and not existing.get("cartridgeImage"):
                 existing["libraryImage"] = lib_image_url; changed = True
             if not existing.get("romCrc"):
@@ -447,7 +444,6 @@ def main():
                 "status": "playing" if playtime_mins > 0 else "backlog",
                 "cartridgeImage": None, "libraryImage": lib_image_url,
                 "coverImage": None, "playtime": playtime_mins,
-                "sessions": 0, "lastPlayed": last_played, "firstPlayed": None,
                 "notes": "", "rating": None, "romCrc": crc,
                 "pocketData": None, "purchasePrice": None,
             })
