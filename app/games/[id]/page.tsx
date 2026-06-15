@@ -301,10 +301,20 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               placeholder="e.g. €12.50" className={inputCls} />
           </Field>
 
-          <Field label="Added">
-            <input type="date" value={(form.createdAt as string) ?? ""}
-              onChange={(e) => set("createdAt", e.target.value ? new Date(e.target.value).toISOString() : null)}
-              className={inputCls} />
+          <Field label="Added (DD.MM.YYYY)">
+            <input
+              type="text"
+              value={(form.createdAt as string) ?? ""}
+              onChange={(e) => set("createdAt", e.target.value)}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (!v) { set("createdAt", null); return; }
+                const m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+                if (m) set("createdAt", new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`).toISOString());
+              }}
+              placeholder="DD.MM.YYYY"
+              className={inputCls}
+            />
           </Field>
 
           <Field label="Notes">
