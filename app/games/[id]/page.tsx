@@ -529,14 +529,23 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 <p className="text-xs text-zinc-600 mb-1">Status</p>
 
                 <div className="flex flex-wrap gap-1.5">
-                  {STATUSES.map((s) => (
-                    <button key={s} onClick={() => patch({ status: s })}
-                      className={`px-2.5 py-1 rounded-full text-xs border transition-all ${
-                        game.status === s ? STATUS_COLORS[s] : "border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
-                      }`}>
-                      {STATUS_LABELS[s]}
-                    </button>
-                  ))}
+                  {STATUSES.map((s) => {
+                    const isActive = game.status === s;
+                    // "Owned" (backlog) gets a subtle highlight when game is playing/completed
+                    const isImplied = s === "backlog" && !isActive && OWNED_STATUSES.includes(game.status);
+                    return (
+                      <button key={s} onClick={() => patch({ status: s })}
+                        className={`px-2.5 py-1 rounded-full text-xs border transition-all ${
+                          isActive
+                            ? STATUS_COLORS[s]
+                            : isImplied
+                            ? "border-emerald-700 text-emerald-600 bg-emerald-900/20"
+                            : "border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+                        }`}>
+                        {STATUS_LABELS[s]}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

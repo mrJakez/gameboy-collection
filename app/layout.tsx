@@ -11,6 +11,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Game Boy Collection",
   description: "My Game Boy cartridge collection",
+  icons: { icon: "/analogue-icon.svg" },
 };
 
 export const viewport: Viewport = {
@@ -26,12 +27,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
           <header className="mb-8 sm:mb-10 flex items-center justify-between gap-3">
             <a href="/" className="flex items-center gap-2.5 group min-w-0">
-              <GameBoyIcon className="w-8 h-8 sm:w-10 sm:h-10 shrink-0" />
-              <div className="min-w-0 hidden sm:block">
+              <GameBoyIcon className="h-10 w-auto shrink-0" />
+              <div className="min-w-0">
                 <h1 className="text-xl font-semibold leading-tight text-zinc-100 group-hover:text-white transition-colors truncate">
-                  Game Boy Collection
+                  <span className="sm:hidden">GB Collection</span>
+                  <span className="hidden sm:inline">Game Boy Collection</span>
                 </h1>
-                <p className="text-xs text-zinc-500 mt-0.5">Analog Pocket · GB · GBC · GBA</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  <span className="sm:hidden">GB · GBC · GBA</span>
+                  <span className="hidden sm:inline">Analog Pocket · GB · GBC · GBA</span>
+                </p>
               </div>
             </a>
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -39,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <HeaderNav />
               <a
                 href="/games/new"
-                className="flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors border border-zinc-700"
+                className="flex items-center gap-1.5 px-2.5 sm:px-4 h-10 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors border border-zinc-700"
               >
                 <span>+</span>
                 <span className="hidden sm:inline">Add game</span>

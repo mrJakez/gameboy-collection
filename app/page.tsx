@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Game, STATUS_LABELS, STATUS_COLORS, PLATFORM_COLORS, formatPlaytime, GameStatus, Platform } from "@/lib/games";
+import { Game, STATUS_LABELS, STATUS_COLORS, PLATFORM_COLORS, formatPlaytime, GameStatus, Platform, impliesOwnership } from "@/lib/games";
 import Image from "next/image";
 import CartridgeSVG from "@/app/components/CartridgeSVG";
 
@@ -88,29 +88,29 @@ function GameCard({ game, urlSuffix }: { game: Game; urlSuffix: string }) {
 }
 
 function StatsBar({ games, statusFilter, onFilter }: { games: Game[]; statusFilter: string; onFilter: (s: string) => void }) {
+  const owned = games.filter((g) => impliesOwnership(g.status)).length;
   const playing = games.filter((g) => g.status === "playing").length;
   const completed = games.filter((g) => g.status === "completed").length;
-  const totalHours = Math.floor(games.reduce((s, g) => s + g.playtime, 0) / 60);
+  const wishlist = games.filter((g) => g.status === "wishlist").length;
 
   const tiles = [
-    { label: "Total", value: games.length, sub: "games", filter: "" },
-    { label: "Playing", value: playing, sub: "currently playing", filter: "playing" },
-    { label: "Completed", value: completed, sub: "finished", filter: "completed" },
-    { label: "Play time", value: `${totalHours}h`, sub: "total", filter: null },
+    { value: owned,     sub: "owned games",       filter: "backlog"   },
+    { value: playing,   sub: "currently playing",  filter: "playing"   },
+    { value: completed, sub: "finished",            filter: "completed" },
+    { value: wishlist,  sub: "wishlist",            filter: "wishlist"  },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
       {tiles.map((stat) => {
-        const clickable = stat.filter !== null;
-        const active = clickable && statusFilter === stat.filter && stat.filter !== "";
+        const active = statusFilter === stat.filter;
         return (
           <div
-            key={stat.label}
-            onClick={() => clickable && onFilter(statusFilter === stat.filter ? "" : stat.filter)}
-            className={`bg-zinc-900 border rounded-xl p-4 text-center transition-all ${
-              clickable ? "cursor-pointer hover:bg-zinc-800/60" : ""
-            } ${active ? "border-zinc-500 bg-zinc-800/60" : "border-zinc-800"}`}
+            key={stat.sub}
+            onClick={() => onFilter(active ? "all" : stat.filter)}
+            className={`bg-zinc-900 border rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-zinc-800/60 ${
+              active ? "border-zinc-500 bg-zinc-800/60" : "border-zinc-800"
+            }`}
           >
             <div className="text-2xl font-bold text-zinc-100">{stat.value}</div>
             <div className="text-xs text-zinc-500 mt-0.5">{stat.sub}</div>
@@ -127,7 +127,8 @@ function HomePage() {
   const router = useRouter();
 
   const query = searchParams.get("q") ?? "";
-  const statusFilter = searchParams.get("status") ?? "";
+  // Default to "backlog" (owned) when no status param is set; "all" = explicit show-everything
+  const statusFilter = searchParams.get("status") ?? "backlog";
   const platformFilter = searchParams.get("platform") ?? "";
   const ratingFilter = Number(searchParams.get("rating") ?? 0);
   const lentFilter = searchParams.get("lent") === "1";
@@ -135,6 +136,11 @@ function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Local input value — decoupled from URL so typing never triggers a router re-render
+  const [inputValue, setInputValue] = useState(query);
+
+  // Keep inputValue in sync if the URL query changes externally (e.g. clear button, back/forward)
+  useEffect(() => { setInputValue(query); }, [query]);
 
   function updateParams(updates: Record<string, string>) {
     const p = new URLSearchParams(searchParams.toString());
@@ -144,7 +150,13 @@ function HomePage() {
     router.replace(`/?${p.toString()}`, { scroll: false });
   }
 
-  function setQuery(v: string) { updateParams({ q: v }); }
+  // Debounce: write to URL only after the user stops typing
+  useEffect(() => {
+    const t = setTimeout(() => updateParams({ q: inputValue }), 300);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputValue]);
+
   function setStatusFilter(v: string) { updateParams({ status: v }); }
   function setPlatformFilter(v: string) { updateParams({ platform: v }); }
   function setRatingFilter(v: number) { updateParams({ rating: v > 0 ? String(v) : "" }); }
@@ -157,7 +169,7 @@ function HomePage() {
   const fetchGames = useCallback(async () => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (statusFilter) params.set("status", statusFilter);
+    if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
     if (platformFilter) params.set("platform", platformFilter);
     if (lentFilter) params.set("lent", "1");
     const res = await fetch(`/api/games?${params}`);
@@ -167,9 +179,9 @@ function HomePage() {
   }, [query, statusFilter, platformFilter, lentFilter]);
 
   useEffect(() => {
-    const t = setTimeout(fetchGames, query ? 200 : 0);
+    const t = setTimeout(fetchGames, 0);
     return () => clearTimeout(t);
-  }, [fetchGames, query]);
+  }, [fetchGames]);
 
   const filtered = ratingFilter > 0
     ? games.filter((g) => g.rating !== null && g.rating >= ratingFilter)
@@ -187,18 +199,18 @@ function HomePage() {
             <input
               type="text"
               placeholder="Search game, publisher or genre…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
               className="w-full pl-9 pr-8 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 focus:bg-zinc-800/60 transition-colors"
             />
-            {query && (
+            {inputValue && (
               <button
                 type="button"
-                onPointerDown={(e) => { e.preventDefault(); setQuery(""); }}
+                onPointerDown={(e) => { e.preventDefault(); setInputValue(""); }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                 aria-label="Clear search"
               >
@@ -212,7 +224,7 @@ function HomePage() {
           <button
             onClick={() => setFiltersOpen((v) => !v)}
             className={`sm:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-all ${
-              filtersOpen || statusFilter || platformFilter || ratingFilter > 0 || lentFilter
+              filtersOpen || (statusFilter && statusFilter !== "backlog") || platformFilter || ratingFilter > 0 || lentFilter
                 ? "bg-zinc-700 text-zinc-100 border-zinc-600"
                 : "bg-zinc-900 border-zinc-800 text-zinc-400"
             }`}
@@ -231,7 +243,7 @@ function HomePage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="flex-1 min-w-[130px] px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors"
           >
-            <option value="">All statuses</option>
+            <option value="all">All statuses</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABELS[s]}</option>
             ))}
@@ -272,7 +284,7 @@ function HomePage() {
       {!loading && (
         <p className="text-xs text-zinc-600 mb-4">
           {filtered.length} {filtered.length === 1 ? "game" : "games"}
-          {(query || statusFilter || platformFilter || ratingFilter > 0) && " found"}
+          {(query || (statusFilter && statusFilter !== "backlog") || platformFilter || ratingFilter > 0) && " found"}
         </p>
       )}
 

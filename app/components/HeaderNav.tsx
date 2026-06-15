@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-const btnCls = "flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors border border-zinc-700 bg-zinc-800 hover:bg-zinc-700";
+const btnCls = "flex items-center gap-1.5 px-2.5 sm:px-4 h-10 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors border border-zinc-700 bg-zinc-800 hover:bg-zinc-700";
 
 function ClockIcon() {
   return (
@@ -37,7 +37,7 @@ export default function HeaderNav() {
         <span className="hidden sm:inline">Play Time</span>
       </a>
       {authenticated && (
-        <a href="/pocket-sync" className={btnCls}>
+        <a href="/pocket-sync" className={`${btnCls} hidden sm:flex`}>
           <UploadIcon />
           <span className="hidden sm:inline">Pocket Sync</span>
         </a>
