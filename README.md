@@ -149,7 +149,7 @@ Upload `list.bin` and `playtimes.bin` from `System/Played Games/` on the SD card
 
 ### Keeping play times up to date
 
-After each gaming session, upload the two files from your SD card via the **Pocket Sync** page in the web UI:
+Upload the two files from your SD card via the **Pocket Sync** page in the web UI whenever you want to bring your play data up to date:
 
 ```
 SD card/System/Played Games/list.bin
@@ -157,6 +157,16 @@ SD card/System/Played Games/playtimes.bin
 ```
 
 The uploaded files are stored in `data/analogue-pocket-playedgames/` and processed immediately. Play times are merged intelligently — if the Pocket shows less time than stored (e.g. after a reset), the values are added rather than overwritten.
+
+A **sync reminder** appears as an amber dot on the Pocket Sync button in the navigation when no sync has happened within the configured interval. The default is 30 days. You can change the interval — or disable the reminder entirely — on the Pocket Sync page:
+
+| Interval | Description |
+|---|---|
+| Weekly | Ideal if you play often and want fresh data |
+| Every 2 weeks | Good balance for regular players |
+| Monthly *(default)* | Suitable for casual sessions |
+| Every 3 months | For occasional play |
+| Disabled | No reminder shown |
 
 ---
 

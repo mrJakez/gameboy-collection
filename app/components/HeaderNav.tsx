@@ -25,9 +25,11 @@ function UploadIcon() {
 
 export default function HeaderNav() {
   const [authenticated, setAuthenticated] = useState(false);
+  const [syncOverdue, setSyncOverdue] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth").then((r) => r.json()).then((d) => setAuthenticated(d.authenticated));
+    fetch("/api/sync-status").then((r) => r.json()).then((d) => setSyncOverdue(d.overdue ?? false));
   }, []);
 
   return (
@@ -38,9 +40,12 @@ export default function HeaderNav() {
       </a>
       {authenticated && (
         <>
-          <a href="/pocket-sync" className={`${btnCls} hidden sm:flex`}>
+          <a href="/pocket-sync" className={`${btnCls} hidden sm:flex relative`}>
             <UploadIcon />
             <span className="hidden sm:inline">Pocket Sync</span>
+            {syncOverdue && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-zinc-900" />
+            )}
           </a>
           <a href="/api/export-excel" className={`${btnCls} hidden sm:flex`}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">

@@ -10,9 +10,20 @@ interface SyncChange {
   after?: string;
 }
 
+const REMINDER_OPTIONS: { label: string; days: number | null }[] = [
+  { label: "Weekly", days: 7 },
+  { label: "Every 2 weeks", days: 14 },
+  { label: "Monthly", days: 30 },
+  { label: "Every 3 months", days: 90 },
+  { label: "Disabled", days: null },
+];
+
 export default function PocketSyncPage() {
   const router = useRouter();
   const [lastSync, setLastSync] = useState<string | null | undefined>(undefined);
+  const [overdue, setOverdue] = useState(false);
+  const [reminderDays, setReminderDays] = useState<number | null>(30);
+  const [authenticated, setAuthenticated] = useState(false);
   const [listFile, setListFile] = useState<File | null>(null);
   const [playtimesFile, setPlaytimesFile] = useState<File | null>(null);
   const [listDragging, setListDragging] = useState(false);
@@ -25,8 +36,28 @@ export default function PocketSyncPage() {
   const playtimesRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/sync-status").then(r => r.json()).then(d => setLastSync(d.syncedAt ?? null));
+    fetch("/api/sync-status").then(r => r.json()).then(d => {
+      setLastSync(d.syncedAt ?? null);
+      setOverdue(d.overdue ?? false);
+      setReminderDays(d.syncReminderDays ?? 30);
+    });
+    fetch("/api/auth").then(r => r.json()).then(d => setAuthenticated(d.authenticated));
   }, []);
+
+  async function handleReminderChange(days: number | null) {
+    setReminderDays(days);
+    await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ syncReminderDays: days }),
+    });
+    if (days === null) {
+      setOverdue(false);
+    } else {
+      const isOverdue = lastSync === null || Date.now() - new Date(lastSync!).getTime() > days * 86_400_000;
+      setOverdue(isOverdue);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +80,7 @@ export default function PocketSyncPage() {
       setOutput(data.output ?? "");
       setChanges(data.changes ?? []);
       setLastSync(new Date().toISOString());
+      setOverdue(false);
     } else {
       setStatus("error");
       setError(data.error ?? "Unknown error");
@@ -81,9 +113,21 @@ export default function PocketSyncPage() {
           <p className="text-xs text-zinc-600 shrink-0 pt-1">Never synced</p>
         )}
       </div>
-      <p className="text-xs text-zinc-500 mb-6">
+      <p className="text-xs text-zinc-500 mb-4">
         Import play times and games from your Analogue Pocket SD card.
       </p>
+
+      {/* Overdue banner */}
+      {overdue && (
+        <div className="bg-amber-950/40 border border-amber-700 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+          <span className="text-amber-400 text-lg leading-none">⏰</span>
+          <p className="text-sm text-amber-300">
+            {lastSync === null
+              ? "You haven't synced yet. Upload your Pocket data to get started."
+              : "Your Pocket data is due for a sync. Upload the latest files to stay up to date."}
+          </p>
+        </div>
+      )}
 
       {/* Hint box */}
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-6 text-sm text-zinc-400">
@@ -108,20 +152,13 @@ export default function PocketSyncPage() {
             if (file) setListFile(file);
           }}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            listDragging
-              ? "border-blue-500 bg-blue-950/20"
-              : listFile
-              ? "border-green-600 bg-green-950/20"
-              : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
+            listDragging ? "border-blue-500 bg-blue-950/20"
+            : listFile ? "border-green-600 bg-green-950/20"
+            : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
           }`}
         >
-          <input
-            ref={listRef}
-            type="file"
-            accept=".bin"
-            className="hidden"
-            onChange={(e) => setListFile(e.target.files?.[0] ?? null)}
-          />
+          <input ref={listRef} type="file" accept=".bin" className="hidden"
+            onChange={(e) => setListFile(e.target.files?.[0] ?? null)} />
           {listFile ? (
             <>
               <p className="text-green-400 text-sm font-medium">✓ {listFile.name}</p>
@@ -147,20 +184,13 @@ export default function PocketSyncPage() {
             if (file) setPlaytimesFile(file);
           }}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            playtimesDragging
-              ? "border-blue-500 bg-blue-950/20"
-              : playtimesFile
-              ? "border-green-600 bg-green-950/20"
-              : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
+            playtimesDragging ? "border-blue-500 bg-blue-950/20"
+            : playtimesFile ? "border-green-600 bg-green-950/20"
+            : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
           }`}
         >
-          <input
-            ref={playtimesRef}
-            type="file"
-            accept=".bin"
-            className="hidden"
-            onChange={(e) => setPlaytimesFile(e.target.files?.[0] ?? null)}
-          />
+          <input ref={playtimesRef} type="file" accept=".bin" className="hidden"
+            onChange={(e) => setPlaytimesFile(e.target.files?.[0] ?? null)} />
           {playtimesFile ? (
             <>
               <p className="text-green-400 text-sm font-medium">✓ {playtimesFile.name}</p>
@@ -182,6 +212,31 @@ export default function PocketSyncPage() {
           {status === "uploading" ? "Importing…" : "Import"}
         </button>
       </form>
+
+      {/* Reminder interval — only for authenticated users */}
+      {authenticated && (
+        <div className="mt-8 border-t border-zinc-800 pt-6">
+          <p className="text-sm font-medium text-zinc-300 mb-1">Sync reminder</p>
+          <p className="text-xs text-zinc-500 mb-3">
+            A reminder appears in the navigation when no sync has happened within the selected interval.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {REMINDER_OPTIONS.map((opt) => (
+              <button
+                key={String(opt.days)}
+                onClick={() => handleReminderChange(opt.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                  reminderDays === opt.days
+                    ? "bg-zinc-100 text-zinc-900 border-zinc-100"
+                    : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Result */}
       {status === "done" && (

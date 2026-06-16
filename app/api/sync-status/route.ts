@@ -3,13 +3,28 @@ import fs from "fs";
 import path from "path";
 
 const FILE = path.join(process.cwd(), "data", "last-sync.json");
+const SETTINGS_FILE = path.join(process.cwd(), "data", "settings.json");
 
 export async function GET() {
-  if (!fs.existsSync(FILE)) return NextResponse.json({ syncedAt: null });
+  let syncedAt: string | null = null;
   try {
-    const { syncedAt } = JSON.parse(fs.readFileSync(FILE, "utf-8"));
-    return NextResponse.json({ syncedAt: syncedAt ?? null });
-  } catch {
-    return NextResponse.json({ syncedAt: null });
-  }
+    if (fs.existsSync(FILE)) {
+      syncedAt = JSON.parse(fs.readFileSync(FILE, "utf-8")).syncedAt ?? null;
+    }
+  } catch { /* ignore */ }
+
+  let syncReminderDays: number | null = 30;
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const s = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
+      syncReminderDays = s.syncReminderDays ?? 30;
+    }
+  } catch { /* ignore */ }
+
+  const overdue =
+    syncReminderDays !== null &&
+    (syncedAt === null ||
+      Date.now() - new Date(syncedAt).getTime() > syncReminderDays * 86_400_000);
+
+  return NextResponse.json({ syncedAt, syncReminderDays, overdue });
 }
