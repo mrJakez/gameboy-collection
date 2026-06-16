@@ -187,6 +187,96 @@ services:
 
 ---
 
+## Public Read-Only API
+
+Two unauthenticated endpoints are available for external integrations (e.g. Vestaboard). Both return JSON with `Cache-Control: no-store` and `Access-Control-Allow-Origin: *`.
+
+### `GET /api/public/activity`
+
+Returns a digest of collection activity — useful for displaying what has been recently played or added.
+
+**Response**
+
+```json
+{
+  "lastSync": {
+    "syncedAt": "2026-04-28T14:35:00.000Z",
+    "daysAgo": 49
+  },
+  "newlyAdded": [
+    { "id": "tetris", "title": "Tetris", "platform": "GB", "status": "playing", "createdAt": "2026-04-28T14:35:00.000Z" }
+  ],
+  "recentlyPlayed": [
+    { "id": "tetris", "title": "Tetris", "platform": "GB", "status": "playing", "playtime": 320, "rating": 5 }
+  ],
+  "stats": {
+    "totalGames": 42,
+    "totalPlaytimeMin": 8430,
+    "playing": 3,
+    "completed": 18,
+    "backlog": 15,
+    "wishlist": 6
+  }
+}
+```
+
+- `newlyAdded` — games added since the last Pocket Sync import
+- `recentlyPlayed` — top 10 games by total playtime (minutes)
+- `lastSync.syncedAt` is `null` if no Pocket Sync has been performed yet
+
+---
+
+### `GET /api/public/games`
+
+Returns the full game collection. Supports optional query parameters for filtering and sorting.
+
+**Query parameters**
+
+| Parameter | Values | Description |
+|---|---|---|
+| `platform` | `GB` · `GBC` · `GBA` | Filter by platform |
+| `status` | `playing` · `completed` · `backlog` · `wishlist` | Filter by status |
+| `sort` | `title` (default) · `playtime` · `rating` · `added` | Sort order |
+
+**Response**
+
+```json
+{
+  "total": 42,
+  "games": [
+    {
+      "id": "tetris",
+      "title": "Tetris",
+      "platform": "GB",
+      "year": 1989,
+      "status": "playing",
+      "rating": 5,
+      "playtime": 320,
+      "notes": "",
+      "lent": false,
+      "purchasePrice": "12.50",
+      "romCrc": "46df91ad",
+      "createdAt": "2026-04-28T14:35:00.000Z"
+    }
+  ]
+}
+```
+
+**Examples**
+
+```bash
+# All GBA games sorted by playtime
+curl http://localhost:3000/api/public/games?platform=GBA&sort=playtime
+
+# Currently playing games
+curl http://localhost:3000/api/public/games?status=playing
+
+# Activity digest for Vestaboard
+curl http://localhost:3000/api/public/activity
+```
+
+---
+
 ## Demo data (without an Analog Pocket)
 
 To try the app without a real SD card, place demo files in `demodata/`:
