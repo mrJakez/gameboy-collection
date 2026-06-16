@@ -51,7 +51,7 @@ next-env.d.ts
 /pocket-played/
 
 # Demo-Daten Inhalte (Ordner selbst per .gitkeep tracken)
-/demodata/library/*
-/demodata/playedgames/*
-!/demodata/library/.gitkeep
-!/demodata/playedgames/.gitkeep
+/analog-pocket-data/library/*
+/analog-pocket-data/playedgames/*
+!/analog-pocket-data/library/.gitkeep
+!/analog-pocket-data/playedgames/.gitkeep

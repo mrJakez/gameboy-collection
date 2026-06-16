@@ -7,9 +7,9 @@ services:
       # App-Daten
       - ./data:/app/data
 
-      # Demo-Daten (lokaler Entwicklungsordner)
-      - ./demodata/library:/library:ro            # Library/Images/GB|GBA|GBC/*.bin
-      - ./demodata/playedgames:/playedgames:ro    # list.bin + playtimes.bin
+      # Analog Pocket Daten
+      - ./analog-pocket-data/library:/library:ro            # Library/Images/GB|GBA|GBC/*.bin
+      - ./analog-pocket-data/playedgames:/playedgames:ro    # list.bin + playtimes.bin
       # Optional: ROM-Sammlung für Titelzuordnung aller Library-Bilder
       # - /pfad/zu/roms:/roms:ro
     environment:

@@ -79,7 +79,7 @@ gameboy-collection/
 │   ├── library/           ← converted cover PNGs
 │   └── cartridges/        ← uploaded cartridge photos
 │
-├── demodata/              ← for local testing without a real SD card
+├── analog-pocket-data/    ← Analog Pocket SD card data (library + play times)
 │   ├── library/           ← Library/Images/GB|GBC|GBA/*.bin
 │   └── playedgames/       ← list.bin + playtimes.bin
 │
@@ -291,7 +291,7 @@ No demo data is included in this repository. To get cover art without an Analog 
 Unzip and place the contents so the folder structure matches what the Pocket uses:
 
 ```
-demodata/
+analog-pocket-data/
 └── library/
     └── Images/
         ├── GB/     ← *.bin cover files
@@ -299,7 +299,7 @@ demodata/
         └── GBA/
 ```
 
-Then point the `POCKET_LIBRARY_DIR` volume at `./demodata/library` in `compose.local.yaml`. Play time data (`list.bin` / `playtimes.bin`) must come from a real Pocket SD card or be uploaded via the Pocket Sync page.
+Then point the `POCKET_LIBRARY_DIR` volume at `./analog-pocket-data/library` in `compose.local.yaml`. Play time data (`list.bin` / `playtimes.bin`) must come from a real Pocket SD card or be uploaded via the Pocket Sync page.
 
 ---
 
