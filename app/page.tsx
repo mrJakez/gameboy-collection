@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Game, STATUS_LABELS, STATUS_COLORS, PLATFORM_COLORS, formatPlaytime, GameStatus, Platform, impliesOwnership } from "@/lib/games";
 import Image from "next/image";
 import CartridgeSVG from "@/app/components/CartridgeSVG";
+import SyncWarningBanner from "@/app/components/SyncWarningBanner";
 
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
 const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
@@ -216,6 +217,7 @@ function HomePage() {
   return (
     <div>
       <StatsBar games={allGames} statusFilter={statusFilter} onFilter={setStatusFilter} />
+      <SyncWarningBanner />
 
       <div className="flex flex-col gap-3 mb-8">
         {/* Search + mobile filter toggle */}

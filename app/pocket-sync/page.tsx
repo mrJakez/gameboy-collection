@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface SyncChange {
@@ -12,6 +12,7 @@ interface SyncChange {
 
 export default function PocketSyncPage() {
   const router = useRouter();
+  const [lastSync, setLastSync] = useState<string | null | undefined>(undefined);
   const [listFile, setListFile] = useState<File | null>(null);
   const [playtimesFile, setPlaytimesFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
@@ -20,6 +21,10 @@ export default function PocketSyncPage() {
   const [changes, setChanges] = useState<SyncChange[]>([]);
   const listRef = useRef<HTMLInputElement>(null);
   const playtimesRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/sync-status").then(r => r.json()).then(d => setLastSync(d.syncedAt ?? null));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +46,7 @@ export default function PocketSyncPage() {
       setStatus("done");
       setOutput(data.output ?? "");
       setChanges(data.changes ?? []);
+      setLastSync(new Date().toISOString());
     } else {
       setStatus("error");
       setError(data.error ?? "Unknown error");
@@ -56,7 +62,23 @@ export default function PocketSyncPage() {
         ← Back
       </a>
 
-      <h2 className="text-xl font-bold text-zinc-100 mb-1">Pocket Sync</h2>
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <h2 className="text-xl font-bold text-zinc-100">Pocket Sync</h2>
+        {lastSync && (
+          <div className="text-right shrink-0">
+            <p className="text-xs text-zinc-500">Last sync</p>
+            <p className="text-sm font-medium text-zinc-300">
+              {new Date(lastSync).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+            </p>
+            <p className="text-xs text-zinc-600">
+              {new Date(lastSync).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+        )}
+        {lastSync === null && (
+          <p className="text-xs text-zinc-600 shrink-0 pt-1">Never synced</p>
+        )}
+      </div>
       <p className="text-xs text-zinc-500 mb-6">
         Import play times and games from your Analogue Pocket SD card.
       </p>

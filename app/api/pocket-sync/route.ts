@@ -63,6 +63,10 @@ export async function POST(req: NextRequest) {
     }
 
     const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");
+    fs.writeFileSync(
+      path.join(process.cwd(), "data", "last-sync.json"),
+      JSON.stringify({ syncedAt: new Date().toISOString() })
+    );
     return NextResponse.json({ ok: true, output, changes });
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string; message?: string };

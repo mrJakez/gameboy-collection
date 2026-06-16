@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthButton from "@/app/components/AuthButton";
+import AddGameButton from "@/app/components/AddGameButton";
 import GameBoyIcon from "@/app/components/GameBoyIcon";
 import HeaderNav from "@/app/components/HeaderNav";
 
@@ -42,13 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <AuthButton />
               <HeaderNav />
-              <a
-                href="/games/new"
-                className="flex items-center gap-1.5 px-2.5 sm:px-4 h-10 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors border border-zinc-700"
-              >
-                <span>+</span>
-                <span className="hidden sm:inline">Add game</span>
-              </a>
+              <AddGameButton />
             </div>
           </header>
           <main>{children}</main>
