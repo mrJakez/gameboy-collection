@@ -15,6 +15,8 @@ export default function PocketSyncPage() {
   const [lastSync, setLastSync] = useState<string | null | undefined>(undefined);
   const [listFile, setListFile] = useState<File | null>(null);
   const [playtimesFile, setPlaytimesFile] = useState<File | null>(null);
+  const [listDragging, setListDragging] = useState(false);
+  const [playtimesDragging, setPlaytimesDragging] = useState(false);
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [output, setOutput] = useState("");
   const [error, setError] = useState("");
@@ -57,7 +59,7 @@ export default function PocketSyncPage() {
   const ready = listFile && playtimesFile;
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl mx-auto">
       <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors mb-6 inline-block">
         ← Back
       </a>
@@ -97,8 +99,18 @@ export default function PocketSyncPage() {
         {/* list.bin */}
         <div
           onClick={() => listRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setListDragging(true); }}
+          onDragLeave={() => setListDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setListDragging(false);
+            const file = e.dataTransfer.files[0];
+            if (file) setListFile(file);
+          }}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            listFile
+            listDragging
+              ? "border-blue-500 bg-blue-950/20"
+              : listFile
               ? "border-green-600 bg-green-950/20"
               : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
           }`}
@@ -117,8 +129,8 @@ export default function PocketSyncPage() {
             </>
           ) : (
             <>
-              <p className="text-zinc-400 text-sm">Select list.bin</p>
-              <p className="text-xs text-zinc-600 mt-1">Click to browse</p>
+              <p className="text-zinc-400 text-sm">{listDragging ? "Drop list.bin here" : "Select list.bin"}</p>
+              <p className="text-xs text-zinc-600 mt-1">Click to browse or drag & drop</p>
             </>
           )}
         </div>
@@ -126,8 +138,18 @@ export default function PocketSyncPage() {
         {/* playtimes.bin */}
         <div
           onClick={() => playtimesRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setPlaytimesDragging(true); }}
+          onDragLeave={() => setPlaytimesDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setPlaytimesDragging(false);
+            const file = e.dataTransfer.files[0];
+            if (file) setPlaytimesFile(file);
+          }}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            playtimesFile
+            playtimesDragging
+              ? "border-blue-500 bg-blue-950/20"
+              : playtimesFile
               ? "border-green-600 bg-green-950/20"
               : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
           }`}
@@ -146,8 +168,8 @@ export default function PocketSyncPage() {
             </>
           ) : (
             <>
-              <p className="text-zinc-400 text-sm">Select playtimes.bin</p>
-              <p className="text-xs text-zinc-600 mt-1">Click to browse</p>
+              <p className="text-zinc-400 text-sm">{playtimesDragging ? "Drop playtimes.bin here" : "Select playtimes.bin"}</p>
+              <p className="text-xs text-zinc-600 mt-1">Click to browse or drag & drop</p>
             </>
           )}
         </div>
