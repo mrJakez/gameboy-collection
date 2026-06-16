@@ -39,8 +39,8 @@ function GameCard({ game, urlSuffix, viewMode }: { game: Game; urlSuffix: string
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 hover:bg-zinc-800/60 transition-all duration-200 h-full flex flex-col">
         <div className="bg-zinc-900 relative flex items-center justify-center overflow-hidden aspect-[940/1064]">
           {showCartridge ? (
-            <div className="absolute inset-0 p-1.5 group-hover:scale-105 transition-transform duration-300">
-              <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
+            <div className={`absolute inset-0 group-hover:scale-105 transition-transform duration-300 flex items-center justify-center ${game.platform === "GBA" ? "p-3" : "p-1.5"}`}>
+              <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className={game.platform === "GBA" ? "w-full" : "w-full h-full"} />
             </div>
           ) : showLibrary ? (
             <Image

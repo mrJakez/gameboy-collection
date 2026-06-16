@@ -4,35 +4,38 @@ interface CartridgeSVGProps {
   className?: string;
 }
 
-// Recessed label well within the trimmed 940×1064 cartridge-shell.png template.
-// Background made transparent and cropped to the cartridge silhouette (8px margin).
-const WELL = { x: 130, y: 316, w: 678, h: 598, rx: 20 } as const;
-const CANVAS_W = 940;
-const CANVAS_H = 1064;
+// GB/GBC: portrait shell 940×1064, label well measured from gb-cartridge-shell.png
+const GB_WELL = { x: 130, y: 316, w: 678, h: 598, rx: 20 } as const;
+const GB_W = 940;
+const GB_H = 1064;
 
-function GBCartridge({ labelSrc }: { labelSrc: string | null }) {
+// GBA: physical cart 5.9cm×3.4cm → scale 966/5.9 = 163.7 px/cm
+// ViewBox 966×557 matches physical proportions exactly.
+// Shell image (966×440) is stretched to fill 966×557 (corrects horizontal distortion).
+// Label: left 0.8cm, top 0.8cm, w 4.3cm, h 2.0cm → x=131, y=131, w=704, h=327
+const GBA_WELL = { x: 131, y: 147, w: 704, h: 327, rx: 28 } as const;
+const GBA_W = 966;
+const GBA_H = 557;
+
+function GBCartridge({ labelSrc, shell }: { labelSrc: string | null; shell: string }) {
   const clipId = `gb-lc-${Math.random().toString(36).slice(2, 7)}`;
   return (
     <svg
-      viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+      viewBox={`0 0 ${GB_W} ${GB_H}`}
       xmlns="http://www.w3.org/2000/svg"
       style={{ display: "block", width: "100%", height: "100%" }}
     >
       <defs>
         <clipPath id={clipId}>
-          <rect x={WELL.x} y={WELL.y} width={WELL.w} height={WELL.h} rx={WELL.rx} />
+          <rect x={GB_WELL.x} y={GB_WELL.y} width={GB_WELL.w} height={GB_WELL.h} rx={GB_WELL.rx} />
         </clipPath>
       </defs>
-
-      {/* Full cartridge template (gray plastic + transparent background + empty well) */}
-      <image href="/images/cartridge-shell.png" x="0" y="0" width={CANVAS_W} height={CANVAS_H} />
-
-      {/* Label sticker placed into the recessed well — plastic frame surrounds it naturally */}
+      <image href={shell} x="0" y="0" width={GB_W} height={GB_H} />
       {labelSrc && (
         <image
           href={labelSrc}
-          x={WELL.x} y={WELL.y}
-          width={WELL.w} height={WELL.h}
+          x={GB_WELL.x} y={GB_WELL.y}
+          width={GB_WELL.w} height={GB_WELL.h}
           preserveAspectRatio="xMidYMid slice"
           clipPath={`url(#${clipId})`}
         />
@@ -41,18 +44,44 @@ function GBCartridge({ labelSrc }: { labelSrc: string | null }) {
   );
 }
 
-// GBA uses the same shell template for now (same visual language)
 function GBACartridge({ labelSrc }: { labelSrc: string | null }) {
-  return <GBCartridge labelSrc={labelSrc} />;
+  const clipId = `gba-lc-${Math.random().toString(36).slice(2, 7)}`;
+  return (
+    <svg
+      viewBox={`0 0 ${GBA_W} ${GBA_H}`}
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: "block", width: "100%", height: "100%" }}
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <rect x={GBA_WELL.x} y={GBA_WELL.y} width={GBA_WELL.w} height={GBA_WELL.h} rx={GBA_WELL.rx} />
+        </clipPath>
+      </defs>
+      {/* Shell image stretched to fill corrected viewBox (fixes horizontal distortion) */}
+      <image href="/images/gba-cartridge-shell.png" x="0" y="0" width={GBA_W} height={GBA_H} preserveAspectRatio="none" />
+      {labelSrc && (
+        <image
+          href={labelSrc}
+          x={GBA_WELL.x} y={GBA_WELL.y}
+          width={GBA_WELL.w} height={GBA_WELL.h}
+          preserveAspectRatio="xMidYMid slice"
+          clipPath={`url(#${clipId})`}
+        />
+      )}
+    </svg>
+  );
 }
 
 export default function CartridgeSVG({ platform, labelSrc, className = "w-full h-full" }: CartridgeSVGProps) {
+  const shell =
+    platform === "GBC" ? "/images/gbc-cartridge-shell.png" : "/images/gb-cartridge-shell.png";
+
   return (
     <div className={className}>
       {platform === "GBA" ? (
         <GBACartridge labelSrc={labelSrc} />
       ) : (
-        <GBCartridge labelSrc={labelSrc} />
+        <GBCartridge labelSrc={labelSrc} shell={shell} />
       )}
     </div>
   );
