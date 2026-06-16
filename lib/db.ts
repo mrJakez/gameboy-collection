@@ -12,7 +12,7 @@ export function readDeleted(): DeletedGame[] {
   return JSON.parse(fs.readFileSync(DELETED_FILE, "utf-8"));
 }
 
-function writeDeleted(list: DeletedGame[]): void {
+export function writeDeleted(list: DeletedGame[]): void {
   fs.writeFileSync(DELETED_FILE, JSON.stringify(list, null, 2));
 }
 

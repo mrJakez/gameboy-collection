@@ -545,6 +545,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
                 {game.year > 0 && <p><span className="text-zinc-600">Year</span>{" "}{game.year}</p>}
                 {game.purchasePrice && <p><span className="text-zinc-600">Spent</span>{" "}{formatEuro(game.purchasePrice)}</p>}
+                {game.romCrc && <p><span className="text-zinc-600">ROM ID</span>{" "}<span className="font-mono text-xs text-zinc-500">{game.romCrc}</span></p>}
               </div>
 
               <div>
@@ -599,7 +600,230 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
+          {/* AI Info */}
+          <AiSection
+            gameId={game.id}
+            title={game.title}
+            platform={game.platform}
+            gameYear={game.year}
+            onYearAdopted={(y) => setGame((g) => g ? { ...g, year: y } : g)}
+            authenticated={authenticated}
+          />
+
         </>
+      )}
+    </div>
+  );
+}
+
+interface AiInfo {
+  description: string;
+  developer: string;
+  publisher: string;
+  genre: string;
+  releaseYear: number | null;
+  metacriticScore: number | null;
+  userScore: number | null;
+  youtubeQuery: string;
+  mobySlug: string;
+  screenshots: string[];
+  cachedAt?: string;
+}
+
+function ScoreBadge({ label, score, max }: { label: string; score: number | null; max: number }) {
+  if (score === null) return null;
+  const pct = score / max;
+  const color = pct >= 0.75 ? "text-green-400 border-green-500/30" : pct >= 0.5 ? "text-amber-400 border-amber-500/30" : "text-red-400 border-red-500/30";
+  return (
+    <div className={`flex flex-col items-center border rounded-xl px-4 py-2.5 ${color}`}>
+      <span className="text-xl font-bold tabular-nums">{score}</span>
+      <span className="text-[10px] text-zinc-500 mt-0.5">{label}</span>
+    </div>
+  );
+}
+
+function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authenticated }: { gameId: string; title: string; platform: string; gameYear: number; onYearAdopted: (y: number) => void; authenticated: boolean }) {
+  const [info, setInfo] = useState<AiInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  const [yearSaved, setYearSaved] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  // On mount: check cache silently
+  useEffect(() => {
+    fetch(`/api/games/${gameId}/ai-info?cached_only=1`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) { setInfo(data); setLoaded(true); } })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
+
+  async function load() {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`/api/games/${gameId}/ai-info?title=${encodeURIComponent(title)}&platform=${encodeURIComponent(platform)}`);
+      if (!res.ok) throw new Error();
+      setInfo(await res.json());
+      setLoaded(true);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resetCache() {
+    await fetch(`/api/games/${gameId}/ai-info`, { method: "DELETE" });
+    setInfo(null);
+    setLoaded(false);
+    setYearSaved(false);
+  }
+
+  function formatCacheDate(iso: string) {
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}.${mm}.${d.getFullYear()} ${hh}:${min}`;
+  }
+
+  return (
+    <div className="mb-8">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">AI</span>
+        <div className="flex-1 h-px bg-zinc-800" />
+        {loaded && info?.cachedAt && (
+          <span className="text-[10px] text-zinc-600">Cached {formatCacheDate(info.cachedAt)}</span>
+        )}
+        {loaded && authenticated && (
+          <button
+            onClick={resetCache}
+            className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors ml-1"
+            title="Reset AI cache"
+          >
+            ↺ Reset
+          </button>
+        )}
+        {!loaded && <span className="text-[10px] text-zinc-600 italic">Generated · may be inaccurate</span>}
+      </div>
+
+      {!loaded && !loading && (
+        <button
+          onClick={load}
+          className="w-full py-3 bg-zinc-900 border border-zinc-800 border-dashed rounded-xl text-sm text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-colors"
+        >
+          ✨ Load AI info
+        </button>
+      )}
+
+      {loading && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-center gap-3">
+          <div className="w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin shrink-0" />
+          <span className="text-sm text-zinc-500">Fetching game info…</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-sm text-red-400">
+          Could not load AI info. <button onClick={load} className="underline hover:text-red-300">Try again</button>
+        </div>
+      )}
+
+      {loaded && info && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+          {/* Meta row with year adopt button */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+            {info.developer && <span><span className="text-zinc-600">Dev</span> {info.developer}</span>}
+            {info.publisher && <span><span className="text-zinc-600">Pub</span> {info.publisher}</span>}
+            {info.genre && <span><span className="text-zinc-600">Genre</span> {info.genre}</span>}
+            {info.releaseYear && (
+              <span className="flex items-center gap-1.5">
+                <span className="text-zinc-600">Year</span> {info.releaseYear}
+                {info.releaseYear !== gameYear && !yearSaved && (
+                  <button
+                    onClick={async () => {
+                      await fetch(`/api/games/${gameId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ year: info.releaseYear }),
+                      });
+                      onYearAdopted(info.releaseYear!);
+                      setYearSaved(true);
+                    }}
+                    className="ml-1 px-2 py-0.5 rounded text-[10px] border border-zinc-600 text-zinc-400 hover:border-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {gameYear > 0 ? `Replace ${gameYear}` : "Use this year"}
+                  </button>
+                )}
+                {yearSaved && <span className="text-green-500 text-[10px]">✓ Saved</span>}
+              </span>
+            )}
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-zinc-300 leading-relaxed">{info.description}</p>
+
+          {/* Scores */}
+          {(info.metacriticScore !== null || info.userScore !== null) && (
+            <div className="flex gap-3">
+              <ScoreBadge label="Metacritic" score={info.metacriticScore} max={100} />
+              <ScoreBadge label="User score" score={info.userScore !== null ? Math.round(info.userScore * 10) : null} max={100} />
+            </div>
+          )}
+
+          {/* Screenshots */}
+          {info.screenshots && info.screenshots.length > 0 && (
+            <div>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Screenshots</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {info.screenshots.map((url, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightbox(url)}
+                    className="block overflow-hidden rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors bg-zinc-800 aspect-video"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={`Screenshot ${i + 1}`}
+                      className="w-full h-full object-contain"
+                      onError={(e) => { (e.currentTarget.closest("button") as HTMLElement).style.display = "none"; }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* YouTube */}
+          {info.youtubeQuery && (
+            <a
+              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(info.youtubeQuery)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 px-4 py-2.5 bg-red-950/30 border border-red-900/40 rounded-lg text-sm text-red-300 hover:bg-red-950/50 hover:border-red-800/60 transition-colors w-fit"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              Watch gameplay on YouTube
+            </a>
+          )}
+        </div>
+      )}
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="Screenshot" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+        </div>
       )}
     </div>
   );

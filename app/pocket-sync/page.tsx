@@ -3,6 +3,13 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
+interface SyncChange {
+  title: string;
+  type: "added" | "playtime" | "status";
+  before?: string;
+  after?: string;
+}
+
 export default function PocketSyncPage() {
   const router = useRouter();
   const [listFile, setListFile] = useState<File | null>(null);
@@ -10,6 +17,7 @@ export default function PocketSyncPage() {
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [output, setOutput] = useState("");
   const [error, setError] = useState("");
+  const [changes, setChanges] = useState<SyncChange[]>([]);
   const listRef = useRef<HTMLInputElement>(null);
   const playtimesRef = useRef<HTMLInputElement>(null);
 
@@ -20,6 +28,7 @@ export default function PocketSyncPage() {
     setStatus("uploading");
     setOutput("");
     setError("");
+    setChanges([]);
 
     const fd = new FormData();
     fd.append("list", listFile);
@@ -31,6 +40,7 @@ export default function PocketSyncPage() {
     if (res.ok) {
       setStatus("done");
       setOutput(data.output ?? "");
+      setChanges(data.changes ?? []);
     } else {
       setStatus("error");
       setError(data.error ?? "Unknown error");
@@ -131,16 +141,47 @@ export default function PocketSyncPage() {
 
       {/* Result */}
       {status === "done" && (
-        <div className="mt-6 bg-green-950/30 border border-green-800 rounded-xl p-4">
-          <p className="text-green-400 text-sm font-medium mb-3">Import complete</p>
-          {output && (
-            <pre className="text-xs text-zinc-400 whitespace-pre-wrap font-mono overflow-x-auto">
-              {output}
-            </pre>
+        <div className="mt-6 space-y-4">
+          <div className="bg-green-950/30 border border-green-800 rounded-xl p-4">
+            <p className="text-green-400 text-sm font-medium">Import complete</p>
+            {changes.length === 0 && (
+              <p className="text-xs text-zinc-500 mt-1">No changes detected.</p>
+            )}
+          </div>
+
+          {changes.length > 0 && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-zinc-800">
+                <p className="text-xs font-medium text-zinc-400">
+                  {changes.length} change{changes.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="divide-y divide-zinc-800">
+                {changes.map((c, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="flex-1 text-sm text-zinc-200 truncate">{c.title}</span>
+                    {c.type === "added" && (
+                      <span className="text-xs text-green-400 font-medium shrink-0">New</span>
+                    )}
+                    {c.type === "playtime" && (
+                      <span className="text-xs text-zinc-400 shrink-0 tabular-nums">
+                        {c.before} min → <span className="text-zinc-200">{c.after} min</span>
+                      </span>
+                    )}
+                    {c.type === "status" && (
+                      <span className="text-xs text-zinc-400 shrink-0">
+                        {c.before} → <span className="text-zinc-200">{c.after}</span>
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
           <button
             onClick={() => router.push("/")}
-            className="mt-4 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-100 rounded-lg transition-colors"
+            className="w-full py-2.5 bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-100 rounded-lg transition-colors"
           >
             Back to collection
           </button>

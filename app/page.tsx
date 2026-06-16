@@ -140,6 +140,10 @@ function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<"alpha" | "added" | "rating">(() => {
+    if (typeof window === "undefined") return "alpha";
+    return (localStorage.getItem("sortMode") as "alpha" | "added" | "rating") ?? "alpha";
+  });
   const [viewMode, setViewMode] = useState<"cartridge" | "screenshot">(() => {
     if (typeof window === "undefined") return "cartridge";
     return (localStorage.getItem("viewMode") as "cartridge" | "screenshot") ?? "cartridge";
@@ -191,9 +195,23 @@ function HomePage() {
     return () => clearTimeout(t);
   }, [fetchGames]);
 
+  const sorted = [...games].sort((a, b) => {
+    if (sortMode === "alpha") return a.title.localeCompare(b.title);
+    if (sortMode === "rating") {
+      const ra = a.rating ?? 0;
+      const rb = b.rating ?? 0;
+      return rb !== ra ? rb - ra : a.title.localeCompare(b.title);
+    }
+    // added: newest first, null dates go last
+    if (!a.createdAt && !b.createdAt) return 0;
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+
   const filtered = ratingFilter > 0
-    ? games.filter((g) => g.rating !== null && g.rating >= ratingFilter)
-    : games;
+    ? sorted.filter((g) => g.rating !== null && g.rating >= ratingFilter)
+    : sorted;
 
   return (
     <div>
@@ -289,8 +307,21 @@ function HomePage() {
         </div>
       </div>
 
-      {/* View toggle */}
-      <div className="flex justify-end mb-3">
+      {/* Sort + View toggle */}
+      <div className="flex justify-end items-center gap-2 mb-3">
+        <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 gap-0.5">
+          {([["alpha", "A–Z"], ["added", "Recent"], ["rating", "★"]] as const).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => { setSortMode(mode); localStorage.setItem("sortMode", mode); }}
+              className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+                sortMode === mode ? "bg-zinc-700 text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 gap-0.5">
           {(["cartridge", "screenshot"] as const).map((mode) => (
             <button

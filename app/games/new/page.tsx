@@ -144,9 +144,24 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-zinc-400 truncate">{d.title}</p>
-                    <p className="text-xs text-zinc-600">Deleted · can be re-added manually</p>
+                    <p className="text-xs text-zinc-600">Previously deleted</p>
                   </div>
-                  <span className="text-[10px] text-red-500/60 border border-red-500/20 rounded px-1.5 py-0.5 shrink-0">Deleted</span>
+                  <button
+                    type="button"
+                    onMouseDown={async (e) => {
+                      e.preventDefault();
+                      const res = await fetch("/api/deleted/restore", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: d.id }),
+                      });
+                      const data = await res.json();
+                      if (data.gameId) window.location.href = `/games/${data.gameId}`;
+                    }}
+                    className="text-[10px] text-green-400 border border-green-500/30 rounded px-2 py-1 shrink-0 hover:bg-green-500/10 transition-colors"
+                  >
+                    Restore
+                  </button>
                 </div>
               ))}
               {results.length > 0 && <div className="border-t border-zinc-800 mt-1" />}

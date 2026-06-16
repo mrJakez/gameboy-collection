@@ -1,0 +1,36 @@
+{
+  "pinball-revenge-of-the-gator": {
+    "description": "Pinball: Revenge of the 'Gator is a unique blend of pinball mechanics and an adventure theme. Players must navigate through various pinball tables, defeating enemies and completing objectives to progress through the quirky storyline, all while enjoying engaging graphics and upbeat music.",
+    "developer": "Hipopo Cividades",
+    "publisher": "Nintendo",
+    "genre": "Pinball",
+    "releaseYear": 1990,
+    "metacriticScore": null,
+    "userScore": 7.8,
+    "youtubeQuery": "Pinball Revenge of the Gator gameplay",
+    "mobySlug": "pinball-revenge-of-the-gator",
+    "cachedAt": "2026-06-16T07:57:07.474Z"
+  },
+  "bugs-bunny-crazy-castle-3": {
+    "description": "In 'Bugs Bunny: Crazy Castle 3', players take control of Bugs Bunny as he navigates through a series of tricky puzzle-filled levels to rescue his friends from the clutches of the dastardly Daffy Duck. Combining platforming action with clever puzzles, the game is notable for its charming graphics and engaging gameplay that appeals to fans of the beloved Looney Tunes characters.",
+    "developer": "Kemco",
+    "publisher": "Sunsoft",
+    "genre": "Puzzle",
+    "releaseYear": 1992,
+    "metacriticScore": null,
+    "userScore": null,
+    "youtubeQuery": "Bugs Bunny Crazy Castle 3 gameplay",
+    "mobySlug": "bugs-bunny-crazy-castle-3",
+    "wikiTitle": "Bugs_Bunny:_Crazy_Castle_3",
+    "screenshots": [
+      "https://upload.wikimedia.org/wikipedia/en/1/10/Bugs_Bunny_Crazy_Castle_3.jpg",
+      "https://images.launchbox-app.com/d0c4d333-940b-4248-bf07-2c811e283ff1.png",
+      "https://i.ytimg.com/vi/OdIt6TWtqy8/hqdefault.jpg",
+      "https://i.ytimg.com/vi/WQ7myvZ_Clc/maxresdefault.jpg",
+      "https://www.reference-gaming.com/assets/media/product/13052/bugs-bunny-crazy-castle-3-game-boy-color-56fce2d7b5cdd.jpg?format=product-cover-large&k=1459413717",
+      "https://media.retroachievements.org/Images/005231.png",
+      "https://i.ytimg.com/vi/pvSHHrSC0qU/maxresdefault.jpg"
+    ],
+    "cachedAt": "2026-06-16T08:15:04.535Z"
+  }
+}

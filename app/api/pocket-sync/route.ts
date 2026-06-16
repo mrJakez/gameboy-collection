@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { readGames } from "@/lib/db";
+import type { Game } from "@/lib/games";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,6 +35,8 @@ export async function POST(req: NextRequest) {
   fs.writeFileSync(path.join(playedDir, "list.bin"), Buffer.from(await listBin.arrayBuffer()));
   fs.writeFileSync(path.join(playedDir, "playtimes.bin"), Buffer.from(await playtimesBin.arrayBuffer()));
 
+  const beforeMap = new Map<string, Game>(readGames().map((g) => [g.id, g]));
+
   try {
     const python = process.env.PYTHON_BIN ?? "python3";
     const { stdout, stderr } = await execFileAsync(python, [
@@ -41,8 +45,25 @@ export async function POST(req: NextRequest) {
       "--library-dir", libraryDir,
     ], { timeout: 120_000 });
 
+    const afterGames = readGames();
+    const changes: { title: string; type: "added" | "playtime" | "status"; before?: string; after?: string }[] = [];
+
+    for (const game of afterGames) {
+      const before = beforeMap.get(game.id);
+      if (!before) {
+        changes.push({ title: game.title, type: "added" });
+      } else {
+        if (game.playtime !== before.playtime) {
+          changes.push({ title: game.title, type: "playtime", before: String(before.playtime), after: String(game.playtime) });
+        }
+        if (game.status !== before.status) {
+          changes.push({ title: game.title, type: "status", before: before.status, after: game.status });
+        }
+      }
+    }
+
     const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");
-    return NextResponse.json({ ok: true, output });
+    return NextResponse.json({ ok: true, output, changes });
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string; message?: string };
     const output = (e.stdout ?? "") + "\n" + (e.stderr ?? "");
