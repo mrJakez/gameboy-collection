@@ -1,4 +1,4 @@
-<h1><img src="docs/logo.svg" width="50" height="40" align="left" alt="Game Boy Collection Logo"> Game Boy Collection</h1>
+<table><tr><td><img src="docs/logo.svg" width="40" alt=""></td><td><h1>Game Boy Collection</h1></td></tr></table>
 
 A self-hosted web app to manage your Game Boy cartridge collection — with direct integration of the **Analog Pocket**. Play times, cover art and session data are automatically imported from the SD card.
 
