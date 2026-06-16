@@ -73,10 +73,8 @@ function GameCard({ game, urlSuffix, viewMode }: { game: Game; urlSuffix: string
           <h3 className="font-medium text-sm text-zinc-100 leading-tight line-clamp-2 group-hover:text-white transition-colors">
             {game.title}
           </h3>
-          {(game.year > 0 || game.developer) && (
-            <p className="text-xs text-zinc-500">
-              {[game.year > 0 ? game.year : null, game.developer || null].filter(Boolean).join(" · ")}
-            </p>
+          {game.year > 0 && (
+            <p className="text-xs text-zinc-500">{game.year}</p>
           )}
           <div className="flex items-center justify-between pt-1">
             <StarRating rating={game.rating} />
@@ -208,7 +206,7 @@ function HomePage() {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">🔍</span>
             <input
               type="text"
-              placeholder="Search game, publisher or genre…"
+              placeholder="Search game…"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               autoComplete="off"

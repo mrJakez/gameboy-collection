@@ -238,11 +238,8 @@ export default function NewGamePage() {
     }
 
     const { addedDate, ...formRest } = form;
-    (formRest as Record<string, unknown>).developer = "";
-    (formRest as Record<string, unknown>).publisher = "";
     const payload = {
       ...formRest,
-      genre: [],
       cartridgeImage: null,
       libraryImage: selectedLibEntry?.libraryImage ?? null,
       coverImage: null,

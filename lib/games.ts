@@ -9,11 +9,8 @@ export interface PocketData {
 export interface Game {
   id: string;
   title: string;
-  developer: string;
-  publisher: string;
   year: number;
   platform: Platform;
-  genre: string[];
   status: GameStatus;
   cartridgeImage: string | null;  // user-uploaded cartridge photo
   libraryImage: string | null;    // auto from Analog Pocket library

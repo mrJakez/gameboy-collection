@@ -145,8 +145,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     if (!game) return;
     setForm({
       title: game.title,
-      developer: game.developer,
-      publisher: game.publisher,
       year: game.year,
       platform: game.platform,
       notes: game.notes,
@@ -174,7 +172,13 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
   async function saveEdit() {
     setSaving(true);
-    await patch({ ...form, purchasePrice: (form.purchasePrice as string) || null });
+    const createdAtRaw = form.createdAt as string;
+    let createdAt: string | null = null;
+    if (createdAtRaw) {
+      const m = createdAtRaw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      createdAt = m ? new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`).toISOString() : (game?.createdAt ?? null);
+    }
+    await patch({ ...form, purchasePrice: (form.purchasePrice as string) || null, createdAt });
     setSaving(false);
     setEditing(false);
   }
@@ -292,14 +296,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             <input type="text" value={form.title ?? ""} onChange={(e) => set("title", e.target.value)} className={inputCls} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Developer">
-              <input type="text" value={form.developer ?? ""} onChange={(e) => set("developer", e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Publisher">
-              <input type="text" value={form.publisher ?? ""} onChange={(e) => set("publisher", e.target.value)} className={inputCls} />
-            </Field>
-          </div>
+
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Year">
@@ -337,12 +334,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               type="text"
               value={(form.createdAt as string) ?? ""}
               onChange={(e) => set("createdAt", e.target.value)}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (!v) { set("createdAt", null); return; }
-                const m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-                if (m) set("createdAt", new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`).toISOString());
-              }}
               placeholder="DD.MM.YYYY"
               className={inputCls}
             />
@@ -551,10 +542,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               <h1 className="text-2xl font-bold text-zinc-100 leading-tight">{game.title}</h1>
 
               <div className="text-sm text-zinc-400 space-y-0.5">
-                {game.developer && <p><span className="text-zinc-600">Developer</span>{" "}{game.developer}</p>}
-                {game.publisher && <p><span className="text-zinc-600">Publisher</span>{" "}{game.publisher}</p>}
+
                 {game.year > 0 && <p><span className="text-zinc-600">Year</span>{" "}{game.year}</p>}
-                {game.genre.length > 0 && <p><span className="text-zinc-600">Genre</span>{" "}{game.genre.join(", ")}</p>}
                 {game.purchasePrice && <p><span className="text-zinc-600">Spent</span>{" "}{formatEuro(game.purchasePrice)}</p>}
               </div>
 

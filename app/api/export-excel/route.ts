@@ -18,11 +18,8 @@ export async function GET() {
     Platform:  g.platform,
     Status:    g.status,
     Year:      g.year || "",
-    Developer: g.developer || "",
-    Publisher: g.publisher || "",
-    Genre:     g.genre?.join(", ") || "",
     Rating:    g.rating ?? "",
-    Spent:     g.purchasePrice ?? "",
+    Spent:     g.purchasePrice ? parseFloat(g.purchasePrice) : "",
     Added:     formatDate(g.createdAt),
     "Play time (min)": g.playtime || "",
     Lent:      g.lent ? "Yes" : "No",
@@ -37,9 +34,6 @@ export async function GET() {
     { wch: 10 }, // Platform
     { wch: 12 }, // Status
     { wch: 6  }, // Year
-    { wch: 20 }, // Developer
-    { wch: 20 }, // Publisher
-    { wch: 20 }, // Genre
     { wch: 8  }, // Rating
     { wch: 10 }, // Spent
     { wch: 12 }, // Added

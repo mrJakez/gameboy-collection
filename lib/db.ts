@@ -20,13 +20,22 @@ let migrationDone = false;
 
 function migrateGames(games: Game[]): Game[] {
   let dirty = false;
-  const migrated = games.map((g: Game & { lastPlayed?: string | null; firstPlayed?: string | null; sessions?: number }) => {
-    const { lastPlayed, firstPlayed, sessions, ...rest } = g;
+  const migrated = games.map((g: Game & { lastPlayed?: string | null; firstPlayed?: string | null; sessions?: number; developer?: string; publisher?: string; genre?: string[] }) => {
+    const { lastPlayed, firstPlayed, sessions, developer, publisher, genre, ...rest } = g;
+    if (developer !== undefined || publisher !== undefined || genre !== undefined) dirty = true;
     if (!rest.createdAt && lastPlayed) {
       rest.createdAt = lastPlayed;
       dirty = true;
     }
     if (lastPlayed !== undefined || firstPlayed !== undefined || sessions !== undefined) dirty = true;
+    // Normalize purchasePrice: replace comma with period, ensure 2 decimal places
+    if (rest.purchasePrice) {
+      const normalized = parseFloat(String(rest.purchasePrice).replace(",", ".").replace(/[^0-9.]/g, ""));
+      if (!isNaN(normalized)) {
+        const fixed = normalized.toFixed(2);
+        if (fixed !== rest.purchasePrice) { rest.purchasePrice = fixed; dirty = true; }
+      }
+    }
     return rest as Game;
   });
   if (dirty) {

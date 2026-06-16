@@ -15,9 +15,6 @@ const KEY_MAP: Record<string, string> = {
   platform: "platform", system: "platform", konsole: "platform",
   status: "status",
   year: "year", jahr: "year", erscheinungsjahr: "year",
-  developer: "developer", entwickler: "developer",
-  publisher: "publisher",
-  genre: "genre",
   rating: "rating", bewertung: "rating", wertung: "rating",
   notes: "notes", notizen: "notes", anmerkungen: "notes",
   spent: "purchasePrice", price: "purchasePrice", preis: "purchasePrice",
@@ -113,16 +110,13 @@ export async function POST(req: NextRequest) {
     const status = STATUS_MAP[statusRaw] ?? "backlog";
     const year = parseInt(String(mapped.year ?? "0")) || 0;
     const rating = (() => { const r = parseInt(String(mapped.rating ?? "")); return (r >= 1 && r <= 5) ? r : null; })();
-    const genre = mapped.genre ? String(mapped.genre).split(/[,;]/).map((g: string) => g.trim()).filter(Boolean) : [];
     const createdAt = parseDate(mapped.createdAt);
     const purchasePrice = parsePrice(mapped.purchasePrice);
 
     const gameData = {
       title, platform, status, year,
-      developer: String(mapped.developer ?? "").trim(),
-      publisher: String(mapped.publisher ?? "").trim(),
       notes: String(mapped.notes ?? "").trim(),
-      genre, rating, purchasePrice,
+      rating, purchasePrice,
       createdAt: createdAt ?? new Date().toISOString(),
     };
 

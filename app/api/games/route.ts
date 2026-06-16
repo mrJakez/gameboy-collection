@@ -15,10 +15,7 @@ export async function GET(req: NextRequest) {
   if (q) {
     games = games.filter(
       (g) =>
-        g.title.toLowerCase().includes(q) ||
-        g.developer.toLowerCase().includes(q) ||
-        g.publisher.toLowerCase().includes(q) ||
-        g.genre.some((gen) => gen.toLowerCase().includes(q))
+        g.title.toLowerCase().includes(q)
     );
   }
   if (status === "backlog") games = games.filter((g) => impliesOwnership(g.status));
