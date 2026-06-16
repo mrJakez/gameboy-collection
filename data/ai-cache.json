@@ -1,25 +1,13 @@
 {
-  "pinball-revenge-of-the-gator": {
-    "description": "Pinball: Revenge of the 'Gator is a unique blend of pinball mechanics and an adventure theme. Players must navigate through various pinball tables, defeating enemies and completing objectives to progress through the quirky storyline, all while enjoying engaging graphics and upbeat music.",
-    "developer": "Hipopo Cividades",
-    "publisher": "Nintendo",
-    "genre": "Pinball",
-    "releaseYear": 1990,
-    "metacriticScore": null,
-    "userScore": 7.8,
-    "youtubeQuery": "Pinball Revenge of the Gator gameplay",
-    "mobySlug": "pinball-revenge-of-the-gator",
-    "cachedAt": "2026-06-16T07:57:07.474Z"
-  },
   "bugs-bunny-crazy-castle-3": {
-    "description": "In 'Bugs Bunny: Crazy Castle 3', players take control of Bugs Bunny as he navigates through a series of tricky puzzle-filled levels to rescue his friends from the clutches of the dastardly Daffy Duck. Combining platforming action with clever puzzles, the game is notable for its charming graphics and engaging gameplay that appeals to fans of the beloved Looney Tunes characters.",
-    "developer": "Kemco",
+    "description": "In 'Bugs Bunny: Crazy Castle 3', players take on the role of Bugs Bunny as he navigates through various levels filled with obstacles and enemies in a quest to rescue his friends. This platformer features colorful graphics, engaging puzzles, and the charm of classic Looney Tunes characters, making it a fun adventure for fans of the franchise.",
+    "developer": "Wingman",
     "publisher": "Sunsoft",
-    "genre": "Puzzle",
+    "genre": "Platformer",
     "releaseYear": 1992,
     "metacriticScore": null,
     "userScore": null,
-    "youtubeQuery": "Bugs Bunny Crazy Castle 3 gameplay",
+    "youtubeQuery": "Bugs Bunny: Crazy Castle 3 gameplay",
     "mobySlug": "bugs-bunny-crazy-castle-3",
     "wikiTitle": "Bugs_Bunny:_Crazy_Castle_3",
     "screenshots": [
@@ -31,6 +19,17 @@
       "https://media.retroachievements.org/Images/005231.png",
       "https://i.ytimg.com/vi/pvSHHrSC0qU/maxresdefault.jpg"
     ],
-    "cachedAt": "2026-06-16T08:15:04.535Z"
+    "reviewScores": [
+      {
+        "outlet": "Allgame",
+        "score": "4.5/5",
+        "url": "https://web.archive.org/web/20141115011526/http://www.allgame.com/game.php?id=17848&tab=review"
+      },
+      {
+        "outlet": "IGN",
+        "score": "6/10"
+      }
+    ],
+    "cachedAt": "2026-06-16T09:11:16.602Z"
   }
 }

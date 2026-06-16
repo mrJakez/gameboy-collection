@@ -627,6 +627,7 @@ interface AiInfo {
   youtubeQuery: string;
   mobySlug: string;
   screenshots: string[];
+  reviewScores?: { outlet: string; score: string; url?: string }[];
   cachedAt?: string;
 }
 
@@ -642,14 +643,99 @@ function ScoreBadge({ label, score, max }: { label: string; score: number | null
   );
 }
 
+function ScreenshotGallery({ urls }: { urls: string[] }) {
+  const [visible, setVisible] = useState<boolean[]>(() => urls.map(() => true));
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+
+  const shown = urls.map((url, i) => ({ url, i })).filter((_, i) => visible[i]);
+  const shownUrls = shown.map((s) => s.url);
+
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") setLightboxIdx((i) => i !== null ? (i - 1 + shownUrls.length) % shownUrls.length : null);
+      if (e.key === "ArrowRight") setLightboxIdx((i) => i !== null ? (i + 1) % shownUrls.length : null);
+      if (e.key === "Escape") setLightboxIdx(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightboxIdx, shownUrls.length]);
+
+  if (shown.length === 0) return null;
+
+  return (
+    <div>
+      <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Screenshots</p>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+        {shown.map(({ url, i }, shownI) => (
+          <button
+            key={i}
+            onClick={() => setLightboxIdx(shownI)}
+            className="aspect-video bg-zinc-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-zinc-500 transition-all flex items-center justify-center p-1"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt={`Screenshot ${shownI + 1}`}
+              className="max-w-full max-h-full object-contain"
+              style={{ imageRendering: "pixelated" }}
+              onError={() => setVisible((v) => { const n = [...v]; n[i] = false; return n; })}
+            />
+          </button>
+        ))}
+      </div>
+
+      {lightboxIdx !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxIdx(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={shownUrls[lightboxIdx]}
+            alt={`Screenshot ${lightboxIdx + 1}`}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {shownUrls.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => i !== null ? (i - 1 + shownUrls.length) % shownUrls.length : 0); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-xl hover:bg-white/20 transition-colors"
+              >&#8249;</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => i !== null ? (i + 1) % shownUrls.length : 0); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-xl hover:bg-white/20 transition-colors"
+              >&#8250;</button>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {shownUrls.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); setLightboxIdx(i); }}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === lightboxIdx ? "bg-white" : "bg-white/30"}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setLightboxIdx(null)}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-sm"
+          >&#x2715;</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authenticated }: { gameId: string; title: string; platform: string; gameYear: number; onYearAdopted: (y: number) => void; authenticated: boolean }) {
   const [info, setInfo] = useState<AiInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [yearSaved, setYearSaved] = useState(false);
-  const [lightbox, setLightbox] = useState<string | null>(null);
-
   // On mount: check cache silently
   useEffect(() => {
     fetch(`/api/games/${gameId}/ai-info?cached_only=1`)
@@ -767,36 +853,36 @@ function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authentic
           {/* Description */}
           <p className="text-sm text-zinc-300 leading-relaxed">{info.description}</p>
 
-          {/* Scores */}
-          {(info.metacriticScore !== null || info.userScore !== null) && (
+          {/* Press review scores */}
+          {info.reviewScores && info.reviewScores.length > 0 ? (
+            <div>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Press scores <span className="normal-case text-zinc-700">· via Wikipedia</span></p>
+              <div className="flex flex-wrap gap-2">
+                {info.reviewScores.map((r) => {
+                  const inner = (
+                    <div className="flex flex-col items-center px-3 py-2 bg-zinc-800 rounded-lg min-w-[64px] text-center">
+                      <span className="text-base font-bold text-zinc-100 leading-tight">{r.score}</span>
+                      <span className="text-[10px] text-zinc-500 mt-0.5 leading-tight">{r.outlet}</span>
+                    </div>
+                  );
+                  return r.url ? (
+                    <a key={r.outlet} href={r.url} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">{inner}</a>
+                  ) : (
+                    <div key={r.outlet}>{inner}</div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (info.metacriticScore !== null || info.userScore !== null) ? (
             <div className="flex gap-3">
               <ScoreBadge label="Metacritic" score={info.metacriticScore} max={100} />
               <ScoreBadge label="User score" score={info.userScore !== null ? Math.round(info.userScore * 10) : null} max={100} />
             </div>
-          )}
+          ) : null}
 
-          {/* Screenshots */}
+          {/* Screenshot slideshow */}
           {info.screenshots && info.screenshots.length > 0 && (
-            <div>
-              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Screenshots</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {info.screenshots.map((url, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setLightbox(url)}
-                    className="block overflow-hidden rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors bg-zinc-800 aspect-video"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`Screenshot ${i + 1}`}
-                      className="w-full h-full object-contain"
-                      onError={(e) => { (e.currentTarget.closest("button") as HTMLElement).style.display = "none"; }}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ScreenshotGallery urls={info.screenshots} />
           )}
 
           {/* YouTube */}
@@ -816,15 +902,7 @@ function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authentic
         </div>
       )}
 
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
-          onClick={() => setLightbox(null)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="Screenshot" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
-        </div>
-      )}
+
     </div>
   );
 }
