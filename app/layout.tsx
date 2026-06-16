@@ -5,6 +5,9 @@ import AuthButton from "@/app/components/AuthButton";
 import AddGameButton from "@/app/components/AddGameButton";
 import GameBoyIcon from "@/app/components/GameBoyIcon";
 import HeaderNav from "@/app/components/HeaderNav";
+import { redirect } from "next/navigation";
+import fs from "fs";
+import path from "path";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -22,6 +25,9 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const dbExists = fs.existsSync(path.join(process.cwd(), "data", "game_db.json"));
+  if (!dbExists) redirect("/setup");
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
       <body className="antialiased bg-zinc-950 text-zinc-100 min-h-screen">
