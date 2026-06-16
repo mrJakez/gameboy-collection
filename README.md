@@ -1,6 +1,6 @@
 <table><tr><td><img src="docs/logo.svg" width="40" alt=""></td><td><h1>Game Boy Collection</h1></td></tr></table>
 
-A self-hosted web app to manage your Game Boy cartridge collection — with direct integration of the **Analog Pocket**. Play times, cover art and session data are automatically imported from the SD card.
+A self-hosted web app to manage your Game Boy cartridge collection — with direct integration of the **Analogue Pocket**. Play times, cover art and session data are automatically imported from the SD card.
 
 > Built with Next.js · TypeScript · Tailwind CSS · Docker
 
@@ -11,7 +11,7 @@ A self-hosted web app to manage your Game Boy cartridge collection — with dire
 ### Game Overview
 ![Game Overview](docs/screenshots/overview.png)
 
-The main view shows all games as cards with cover art (automatically pulled from the Analog Pocket library) or virtual cartridge renders. Status badge, star rating and play time are shown per card. The stat tiles at the top act as quick filters; full search and filter controls are below.
+The main view shows all games as cards with cover art (automatically pulled from the Analogue Pocket library) or virtual cartridge renders. Status badge, star rating and play time are shown per card. The stat tiles at the top act as quick filters; full search and filter controls are below.
 
 ### Game Detail
 ![Game Detail](docs/screenshots/detail.png)
@@ -27,7 +27,7 @@ A sortable leaderboard of all played titles with progress bar, total play time a
 
 ## Features
 
-- **Automatic import** from the Analog Pocket SD card
+- **Automatic import** from the Analogue Pocket SD card
   - Play times and sessions from `list.bin` / `playtimes.bin`
   - Cover art from the Library (GB · GBC · GBA)
   - Title matching via No-Intro database (~8,400 entries)
@@ -56,7 +56,7 @@ A sortable leaderboard of all played titles with progress bar, total play time a
 ## Requirements
 
 - Docker & Docker Compose
-- An **Analog Pocket** SD card (or the Library Image Set, see below)
+- An **Analogue Pocket** SD card (or the Library Image Set, see below)
 - An **OpenAI API key** *(optional)* — only needed for AI features
 
 ---
@@ -97,13 +97,13 @@ The app is available at **http://localhost:3000**.
 
 ---
 
-### Preparing the Analog Pocket Library (one-time)
+### Preparing the Analogue Pocket Library (one-time)
 
-The Library folder contains small cover screenshots that the Analog Pocket generates for every game you've played. These are stored on the SD card and are used as thumbnails throughout the app.
+The Library folder contains small cover screenshots that the Analogue Pocket generates for every game you've played. These are stored on the SD card and are used as thumbnails throughout the app.
 
 **Steps:**
 
-1. Eject the SD card from your Analog Pocket
+1. Eject the SD card from your Analogue Pocket
 2. On the SD card, navigate to `System/Library/`
 3. Copy the entire `Library/` folder to your server next to `compose.yaml`:
 
@@ -120,7 +120,7 @@ your-server/
 
 This folder is mounted **read-only** — the app never writes to it. You only need to update it when new games appear in your library.
 
-> **Don't have an Analog Pocket yet?** A pre-built Library Image Set is available for download — see the [Library image set](#library-image-set) section below.
+> **Don't have an Analogue Pocket yet?** A pre-built Library Image Set is available for download — see the [Library image set](#library-image-set) section below.
 
 Play time data (`list.bin` / `playtimes.bin`) is uploaded via the web UI — **no SD card reader needed** after the initial library copy.
 
@@ -166,7 +166,7 @@ The uploaded files are stored in `data/analogue-pocket-playedgames/` and process
 | Host path | Container path | Mode | Description |
 |---|---|---|---|
 | `./data` | `/app/data` | read-write | All app data: game database, converted images, cartridge photos, play time files |
-| `./analogue-pocket-library` | `/analogue-pocket-library` | **read-only** | Analog Pocket Library folder with cover images (`.bin` files) |
+| `./analogue-pocket-library` | `/analogue-pocket-library` | **read-only** | Analogue Pocket Library folder with cover images (`.bin` files) |
 
 ### Environment variables
 
@@ -270,7 +270,7 @@ curl http://localhost:3000/api/public/activity
 
 ## Library image set
 
-No demo data is included in this repository. To get cover art without an Analog Pocket SD card, a pre-built **Library Image Set** is available for download:
+No demo data is included in this repository. To get cover art without an Analogue Pocket SD card, a pre-built **Library Image Set** is available for download:
 
 **[Download Library-Image-Set-v1.0.zip](https://www.dropbox.com/scl/fi/bdtrnrkumfisn0qb35k2w/Library-Image-Set-v1.0.zip?rlkey=7bhva23z55dxyngtqrj54kus4&dl=1)**
 
@@ -316,5 +316,5 @@ App runs at http://localhost:3000
 - **Next.js 15** (App Router, Standalone Build)
 - **TypeScript**
 - **Tailwind CSS v4**
-- **Python 3** (import script for Analog Pocket data)
+- **Python 3** (import script for Analogue Pocket data)
 - **Docker** (Alpine image, ~200 MB)

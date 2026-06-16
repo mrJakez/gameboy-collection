@@ -22,7 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </h1>
             <p className="text-xs text-zinc-500 mt-0.5">
               <span className="sm:hidden">GB · GBC · GBA</span>
-              <span className="hidden sm:inline">Analog Pocket · GB · GBC · GBA</span>
+              <span className="hidden sm:inline">Analogue Pocket · GB · GBC · GBA</span>
             </p>
           </div>
         </a>

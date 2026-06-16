@@ -7,7 +7,7 @@ services:
       # App-Daten (alle beweglichen Daten)
       - ./data:/app/data
 
-      # Analog Pocket Library (read-only mount vom SD-Karten-Inhalt)
+      # Analogue Pocket Library (read-only mount vom SD-Karten-Inhalt)
       - ./analogue-pocket-library:/analogue-pocket-library:ro   # Library/Images/GB|GBA|GBC/*.bin
       # Optional: ROM-Sammlung für Titelzuordnung aller Library-Bilder
       # - /pfad/zu/roms:/roms:ro

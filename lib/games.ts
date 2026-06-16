@@ -13,13 +13,13 @@ export interface Game {
   platform: Platform;
   status: GameStatus;
   cartridgeImage: string | null;  // user-uploaded cartridge photo
-  libraryImage: string | null;    // auto from Analog Pocket library
+  libraryImage: string | null;    // auto from Analogue Pocket library
   coverImage: string | null;
   playtime: number; // minutes
   notes: string;
   rating: number | null; // 1-5
   lent: boolean; // currently lent out to someone
-  romCrc: string | null; // ROM CRC32 from Analog Pocket
+  romCrc: string | null; // ROM CRC32 from Analogue Pocket
   pocketData: PocketData | null;
   purchasePrice: string | null;
   createdAt: string | null;

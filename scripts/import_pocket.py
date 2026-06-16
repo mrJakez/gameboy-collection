@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Analog Pocket → Game Boy Collection importer.
+Analogue Pocket → Game Boy Collection importer.
 
 Reads from POCKET_DATA_DIR (default: ./pocket-data):
   Played Games/list.bin      – game list (titles + CRC32)
@@ -318,7 +318,7 @@ def enrich_game_db_with_lib_crcs(played_games: list[dict]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import Analog Pocket data")
+    parser = argparse.ArgumentParser(description="Import Analogue Pocket data")
     parser.add_argument("--library-dir", default=str(PROJECT_ROOT / "analogue-pocket-library"),
                         help="Path to the Library folder from the SD card")
     parser.add_argument("--played-dir", default=str(PROJECT_ROOT / "data" / "analogue-pocket-playedgames"),

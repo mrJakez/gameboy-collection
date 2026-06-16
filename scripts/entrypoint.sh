@@ -12,7 +12,7 @@ echo "╚═══════════════════════�
 echo ""
 
 if [ -f "$PLAYED_DIR/list.bin" ]; then
-    echo "▶ Analog Pocket Daten gefunden – starte Import..."
+    echo "▶ Analogue Pocket Daten gefunden – starte Import..."
     echo ""
     ROMS_ARG=""
     if [ -d "$ROMS_DIR" ] && [ "$(ls -A "$ROMS_DIR" 2>/dev/null)" ]; then

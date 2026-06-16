@@ -142,7 +142,7 @@ export default function PlaytimePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-zinc-100">Play Time</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">All titles sorted by time on the Analog Pocket</p>
+          <p className="text-xs text-zinc-500 mt-0.5">All titles sorted by time on the Analogue Pocket</p>
         </div>
         <div className="flex items-center gap-2">
           <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Collection</a>
@@ -181,7 +181,7 @@ export default function PlaytimePage() {
         <div className="text-center py-20 text-zinc-600">
           <p className="text-4xl mb-3">⏱</p>
           <p className="text-sm">No play time recorded yet.</p>
-          <p className="text-xs mt-2">Import your Analog Pocket data.</p>
+          <p className="text-xs mt-2">Import your Analogue Pocket data.</p>
         </div>
       ) : (
         <div className="space-y-2">

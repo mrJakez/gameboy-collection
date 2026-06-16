@@ -322,7 +322,7 @@ export default function SetupPage() {
             <div className="bg-zinc-800/40 border border-zinc-700/60 rounded-lg px-4 py-3 mb-4 space-y-1.5 text-xs text-zinc-400">
               <p><span className="text-zinc-200 font-medium">Why import this database?</span></p>
               <p>The No-Intro database contains a complete list of all known Game Boy, Game Boy Color and Game Boy Advance titles. Once imported, these games are automatically available in your collection — you can simply select them instead of entering titles manually.</p>
-              <p>It also enables automatic artwork mapping: library images that can optionally be stored on the Analog Pocket will be matched to the correct game title automatically.</p>
+              <p>It also enables automatic artwork mapping: library images that can optionally be stored on the Analogue Pocket will be matched to the correct game title automatically.</p>
             </div>
             <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 mb-5 space-y-2">
               <p className="text-xs font-semibold text-zinc-300 mb-1">How to download the files</p>
@@ -372,14 +372,14 @@ export default function SetupPage() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
             <h2 className="text-base font-semibold text-zinc-100">Library Images</h2>
             <p className="text-sm text-zinc-400">
-              The Analog Pocket stores small game screenshots as <span className="font-mono text-zinc-300">.bin</span> files on the SD card.
+              The Analogue Pocket stores small game screenshots as <span className="font-mono text-zinc-300">.bin</span> files on the SD card.
               These are converted to PNG and used as game thumbnails throughout the app.
             </p>
 
             {libStatus && !libStatus.hasImages && (
               <div className="bg-yellow-950/30 border border-yellow-700/60 rounded-xl p-4 space-y-2 text-xs text-zinc-400">
                 <p className="text-yellow-400 font-medium text-sm">No library images found</p>
-                <p>Copy the <span className="font-mono text-zinc-300">Library/</span> folder from your Analog Pocket SD card into <span className="font-mono text-zinc-300">analogue-pocket-library/</span>.</p>
+                <p>Copy the <span className="font-mono text-zinc-300">Library/</span> folder from your Analogue Pocket SD card into <span className="font-mono text-zinc-300">analogue-pocket-library/</span>.</p>
                 <p>You can find it at <span className="font-mono text-zinc-300">System/Library/</span> on the SD card.</p>
                 <p className="pt-1">Don't have the files? Search for <span className="text-zinc-200 font-medium">analogue pocket library not working</span> on Google — the community has resources for obtaining the library image set.</p>
               </div>
@@ -440,13 +440,13 @@ export default function SetupPage() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
             <h2 className="text-base font-semibold text-zinc-100">Import Pocket Data</h2>
             <p className="text-sm text-zinc-400">
-              Import your play history and game list directly from the Analog Pocket SD card.
+              Import your play history and game list directly from the Analogue Pocket SD card.
               This adds games you've played and syncs playtimes to your collection.
             </p>
 
             <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 text-xs text-zinc-400 space-y-2">
               <p className="font-medium text-zinc-300">Where to find the files</p>
-              <p>On your Analog Pocket SD card under:</p>
+              <p>On your Analogue Pocket SD card under:</p>
               <code className="block bg-zinc-800 rounded-lg px-3 py-2 text-zinc-300 font-mono mt-1">
                 System/Played Games/list.bin<br />
                 System/Played Games/playtimes.bin
