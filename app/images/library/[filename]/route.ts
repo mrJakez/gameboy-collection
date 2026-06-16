@@ -3,10 +3,7 @@ import fs from "fs";
 import path from "path";
 import zlib from "zlib";
 
-const LIBRARY_DIR =
-  process.env.POCKET_LIBRARY_DIR
-    ? path.join(process.env.POCKET_LIBRARY_DIR, "Images")
-    : path.join(process.cwd(), "analogue-pocket-library", "Images");
+const LIBRARY_DIR = "/analogue-pocket-library/Images";
 const PUBLIC_LIBRARY = path.join(process.cwd(), "data", "library-images");
 
 const PLATFORM_DIMS: Record<string, [number, number]> = {

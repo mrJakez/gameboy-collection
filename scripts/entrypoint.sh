@@ -1,8 +1,8 @@
 #!/bin/sh
 # Container entrypoint: import Pocket data, then start Next.js
 
-LIBRARY_DIR="${POCKET_LIBRARY_DIR:-/analogue-pocket-library}"
-PLAYED_DIR="${POCKET_PLAYED_DIR:-/data/analogue-pocket-playedgames}"
+LIBRARY_DIR="/analogue-pocket-library"
+PLAYED_DIR="/data/analogue-pocket-playedgames"
 ROMS_DIR="${ROMS_DIR:-/roms}"
 
 echo ""

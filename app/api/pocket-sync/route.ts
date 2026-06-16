@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   const playedDir = path.join(process.cwd(), "data", "analogue-pocket-playedgames");
-  const libraryDir = process.env.POCKET_LIBRARY_DIR ?? path.join(process.cwd(), "analogue-pocket-library");
+  const libraryDir = "/analogue-pocket-library";
   const scriptPath = path.join(process.cwd(), "scripts", "import_pocket.py");
 
   fs.mkdirSync(playedDir, { recursive: true });

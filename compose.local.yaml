@@ -14,6 +14,5 @@ services:
     environment:
       - NODE_ENV=production
       - ADMIN_PASSWORD=linux666
-      - POCKET_LIBRARY_DIR=/analogue-pocket-library
       # - ROMS_DIR=/roms
     restart: unless-stopped

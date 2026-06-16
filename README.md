@@ -82,7 +82,6 @@ services:
       - ./analogue-pocket-library:/analogue-pocket-library:ro   # Pocket Library images (read-only)
     environment:
       - ADMIN_PASSWORD=your-password    # omit for open access
-      - POCKET_LIBRARY_DIR=/analogue-pocket-library
       # - OPENAI_API_KEY=sk-...        # optional: enables AI features
     restart: unless-stopped
 ```
@@ -174,7 +173,6 @@ The uploaded files are stored in `data/analogue-pocket-playedgames/` and process
 |---|---|---|
 | `ADMIN_PASSWORD` | *(empty)* | Login password. Empty = open access (no login required) |
 | `OPENAI_API_KEY` | *(empty)* | Required for AI game info and AI cartridge label crop |
-| `POCKET_LIBRARY_DIR` | `/analogue-pocket-library` | Path to the Library folder inside the container |
 
 ---
 
@@ -285,7 +283,7 @@ analog-pocket-data/
         └── GBA/
 ```
 
-Then point the `POCKET_LIBRARY_DIR` volume at `./analog-pocket-data/library` in `compose.local.yaml`. Play time data (`list.bin` / `playtimes.bin`) must come from a real Pocket SD card or be uploaded via the Pocket Sync page.
+Mount the folder as `./analogue-pocket-library:/analogue-pocket-library:ro` in `compose.yaml`. Play time data (`list.bin` / `playtimes.bin`) must come from a real Pocket SD card or be uploaded via the Pocket Sync page.
 
 ---
 
