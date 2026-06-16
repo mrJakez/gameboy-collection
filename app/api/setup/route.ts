@@ -13,9 +13,13 @@ function parseNoIntroXml(xml: string, platform: Platform): Record<string, { titl
   const gameRegex = /<game\s+name="([^"]+)"[^>]*>[\s\S]*?<\/game>/g;
   const crcRegex = /<file\b[^>]*\bcrc32="([0-9a-fA-F]{8})"[^>]*>/;
 
+  function decodeEntities(s: string) {
+    return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+  }
+
   let match;
   while ((match = gameRegex.exec(xml)) !== null) {
-    const name = match[1];
+    const name = decodeEntities(match[1]);
     const block = match[0];
     const crcMatch = crcRegex.exec(block);
     if (crcMatch) {

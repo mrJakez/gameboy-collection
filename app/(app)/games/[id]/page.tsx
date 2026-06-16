@@ -199,7 +199,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     closeChooser();
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("gameId", id);
+    fd.append("gameId", game?.romCrc ?? id);
     const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
     const data = await res.json();
     setProcessingLabel(false);
@@ -217,7 +217,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     setProcessingLabel(true);
     const fd = new FormData();
     fd.append("select", variantPath);
-    fd.append("gameId", id);
+    fd.append("gameId", game?.romCrc ?? id);
     const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
     const data = await res.json();
     setProcessingLabel(false);
@@ -232,7 +232,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     const fd = new FormData();
     fd.append("crop", JSON.stringify(box));
     fd.append("original", origImg);
-    fd.append("gameId", id);
+    fd.append("gameId", game?.romCrc ?? id);
     const res = await fetch("/api/process-cartridge", { method: "POST", body: fd });
     const data = await res.json();
     setProcessingLabel(false);

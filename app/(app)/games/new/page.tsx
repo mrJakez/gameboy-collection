@@ -11,8 +11,15 @@ const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 interface LibraryEntry {
   title: string;
   romCrc: string;
+  platform: string;
   libraryImage: string | null;
 }
+
+const PLATFORM_LABELS: Record<string, string> = {
+  GB: "Game Boy",
+  GBC: "Game Boy Color",
+  GBA: "Game Boy Advance",
+};
 
 interface ExistingGame {
   id: string;
@@ -196,7 +203,7 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-zinc-100 truncate">{entry.title}</p>
-                    <p className="text-xs text-zinc-600 font-mono">{entry.romCrc}</p>
+                    <p className="text-xs text-zinc-500">{PLATFORM_LABELS[entry.platform] ?? entry.platform}</p>
                   </div>
                 </button>
               ))}
@@ -237,7 +244,7 @@ export default function NewGamePage() {
     setSelectedLibEntry(entry);
     set("title", entry.title);
     set("romCrc", entry.romCrc);
-    // If we have a libraryImage, we can infer the platform (would need platform info from API)
+    if (entry.platform) set("platform", entry.platform);
   }
 
   async function submit(e: React.FormEvent) {

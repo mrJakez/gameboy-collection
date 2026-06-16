@@ -42,16 +42,11 @@ next-env.d.ts
 
 # App data (mount via Docker volumes on NAS)
 /data/games.json
-/data/library/
+/data/library-images/
 /data/cartridges/
-/public/library/
 /public/cartridges/
 /pocket-data/
-/pocket-library/
-/pocket-played/
+/analogue-pocket-library/
 
 # Demo-Daten Inhalte (Ordner selbst per .gitkeep tracken)
-/analog-pocket-data/library/*
-/analog-pocket-data/playedgames/*
-!/analog-pocket-data/library/.gitkeep
-!/analog-pocket-data/playedgames/.gitkeep
+/data/analogue-pocket-playedgames/

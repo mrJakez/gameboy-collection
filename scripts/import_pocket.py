@@ -11,7 +11,7 @@ Reads from POCKET_DATA_DIR (default: ./pocket-data):
 
 Writes to:
   data/games.json            – merged game database
-  public/library/            – converted PNG cover images
+  data/library-images/       – converted PNG cover images
 
 Run on container startup or manually:
   python3 scripts/import_pocket.py [--pocket-dir /path/to/pocket-data]
@@ -24,6 +24,7 @@ import sys
 import argparse
 import datetime
 from pathlib import Path
+from typing import Optional
 
 try:
     from PIL import Image as PILImage
@@ -33,7 +34,7 @@ except ImportError:
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_FILE = PROJECT_ROOT / "data" / "games.json"
-LIBRARY_DIR = PROJECT_ROOT / "data" / "library"
+LIBRARY_DIR = PROJECT_ROOT / "data" / "library-images"
 
 # Platform dimensions
 PLATFORM_DIMS = {
@@ -197,7 +198,7 @@ def convert_bin_to_png(bin_path: Path, out_path: Path, platform: str) -> bool:
     return True
 
 
-def find_library_image(lib_crc: str, library_dir: Path) -> tuple[Path | None, str]:
+def find_library_image(lib_crc: str, library_dir: Path) -> "tuple[Optional[Path], str]":
     """Search Library/Images/<platform>/<lib_crc>.bin. Returns (path, platform) or (None, 'GB')."""
     images = library_dir / "Images"
     for platform in ("GBA", "GBC", "GB"):
@@ -299,38 +300,28 @@ def load_game_db() -> dict:
     return {}
 
 
-def build_library_index(library_dir: Path, played_games: list[dict], rom_db: dict) -> list[dict]:
-    """Build library_index.json: all converted PNGs with titles from played_games, game_db, or rom_db."""
+def enrich_game_db_with_lib_crcs(played_games: list[dict]) -> None:
+    """Add libCrc to game_db.json entries based on rom_crc → lib_crc mapping from played games."""
     game_db = load_game_db()
+    if not game_db:
+        return
 
-    # Priority: played games > no-intro db > rom scan
-    title_map = {}
-    for lib_crc, info in game_db.items():
-        title_map[lib_crc] = {"title": info["title"], "platform": info["platform"], "romCrc": None}
-    for lib_crc, info in rom_db.items():
-        if lib_crc not in title_map:
-            title_map[lib_crc] = {"title": info["title"], "platform": info["platform"], "romCrc": None}
-    for pg in played_games:
-        title_map[pg["lib_crc"]] = {"title": pg["title"], "platform": pg["platform"], "romCrc": pg["rom_crc"]}
+    rom_to_lib = {pg["rom_crc"]: pg["lib_crc"] for pg in played_games if pg.get("rom_crc") and pg.get("lib_crc")}
+    changed = False
+    for rom_crc, lib_crc in rom_to_lib.items():
+        if rom_crc in game_db and game_db[rom_crc].get("libCrc") != lib_crc:
+            game_db[rom_crc]["libCrc"] = lib_crc
+            changed = True
 
-    index = []
-    for png in sorted(LIBRARY_DIR.glob("*.png")):
-        lib_crc = png.stem
-        known = title_map.get(lib_crc)
-        index.append({
-            "libCrc":    lib_crc,
-            "romCrc":    known["romCrc"] if known else None,
-            "title":     known["title"]  if known else "",
-            "platform":  known["platform"] if known else "GB",
-        })
-    return index
+    if changed:
+        GAME_DB_FILE.write_text(json.dumps(game_db, ensure_ascii=False))
 
 
 def main():
     parser = argparse.ArgumentParser(description="Import Analog Pocket data")
-    parser.add_argument("--library-dir", default=str(PROJECT_ROOT / "pocket-library"),
+    parser.add_argument("--library-dir", default=str(PROJECT_ROOT / "analogue-pocket-library"),
                         help="Path to the Library folder from the SD card")
-    parser.add_argument("--played-dir", default=str(PROJECT_ROOT / "pocket-played"),
+    parser.add_argument("--played-dir", default=str(PROJECT_ROOT / "data" / "analogue-pocket-playedgames"),
                         help="Path to the PlayedGames folder (contains list.bin + playtimes.bin)")
     parser.add_argument("--roms-dir", default=None,
                         help="Path to ROM collection (.gb/.gbc/.gba) for title lookup")
@@ -469,11 +460,8 @@ def main():
         save_games(games)
         print(f"   games.json  ({len(games)} Einträge)")
 
-        index = build_library_index(library_dir, pocket_games, rom_db)
-        index_path = PROJECT_ROOT / "data" / "library_index.json"
-        index_path.write_text(json.dumps(index, indent=2, ensure_ascii=False))
-        titled = sum(1 for e in index if e["title"])
-        print(f"   library_index.json  ({len(index)} Einträge, {titled} mit Titel)")
+        enrich_game_db_with_lib_crcs(pocket_games)
+        print(f"   game_db.json  (libCrc für {len(pocket_games)} gespielte Spiele ergänzt)")
 
     print()
     print("──────────────────────────────────────────────────────")

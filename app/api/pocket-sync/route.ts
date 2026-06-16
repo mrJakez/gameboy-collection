@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/app/api/auth/route";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { readGames } from "@/lib/db";
@@ -26,12 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Only .bin files are allowed." }, { status: 400 });
   }
 
-  const playedDir = process.env.POCKET_PLAYED_DIR ?? path.join(process.cwd(), "pocket-played");
-  const libraryDir = process.env.POCKET_LIBRARY_DIR ?? path.join(process.cwd(), "pocket-library");
+  const playedDir = path.join(process.cwd(), "data", "analogue-pocket-playedgames");
+  const libraryDir = process.env.POCKET_LIBRARY_DIR ?? path.join(process.cwd(), "analogue-pocket-library");
   const scriptPath = path.join(process.cwd(), "scripts", "import_pocket.py");
 
   fs.mkdirSync(playedDir, { recursive: true });
-
   fs.writeFileSync(path.join(playedDir, "list.bin"), Buffer.from(await listBin.arrayBuffer()));
   fs.writeFileSync(path.join(playedDir, "playtimes.bin"), Buffer.from(await playtimesBin.arrayBuffer()));
 
