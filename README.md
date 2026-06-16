@@ -46,6 +46,8 @@ A sortable leaderboard of all played titles with progress bar, total play time a
   - Filter state persisted in the URL — navigating back restores the last search
   - Clickable stat tiles as quick filters
 - **Play time view** with ranking, sorting and "hide completed" toggle
+- **AI game info** *(requires OpenAI API key)* — per-game panel with game description, developer/publisher/genre, press review scores pulled from Wikipedia, gameplay screenshots, and a YouTube link. Results are cached locally so each title is only fetched once.
+- **AI cartridge label crop** *(requires OpenAI API key)* — when uploading a cartridge photo, the AI automatically detects and crops the label area.
 - **Password protection** — reading is always public, editing requires login
 - **Docker-ready** — a single `docker compose up`
 
@@ -54,7 +56,8 @@ A sortable leaderboard of all played titles with progress bar, total play time a
 ## Requirements
 
 - Docker & Docker Compose
-- An **Analog Pocket** SD card (or demo data, see below)
+- An **Analog Pocket** SD card (or the Library Image Set, see below)
+- An **OpenAI API key** *(optional)* — only needed for AI features
 
 ---
 
@@ -159,6 +162,7 @@ SD card/
 | Variable | Default | Description |
 |---|---|---|
 | `ADMIN_PASSWORD` | *(empty)* | Login password. Empty = no password protection |
+| `OPENAI_API_KEY` | *(empty)* | OpenAI API key — required for AI game info and cartridge label detection |
 | `POCKET_LIBRARY_DIR` | `/library` | Path to the Library folder inside the container |
 | `POCKET_PLAYED_DIR` | `/playedgames` | Path to the play time folder inside the container |
 | `ROMS_DIR` | `/roms` | Path to the ROM collection (optional) |
@@ -179,6 +183,7 @@ services:
     environment:
       - NODE_ENV=production
       - ADMIN_PASSWORD=your-password
+      - OPENAI_API_KEY=sk-...          # optional: enables AI features
       - POCKET_LIBRARY_DIR=/library
       - POCKET_PLAYED_DIR=/playedgames
       # - ROMS_DIR=/roms
@@ -277,22 +282,24 @@ curl http://localhost:3000/api/public/activity
 
 ---
 
-## Demo data (without an Analog Pocket)
+## Library image set
 
-To try the app without a real SD card, place demo files in `demodata/`:
+No demo data is included in this repository. To get cover art without an Analog Pocket SD card, a pre-built **Library Image Set** is available for download:
+
+**[Download Library-Image-Set-v1.0.zip](https://www.dropbox.com/scl/fi/bdtrnrkumfisn0qb35k2w/Library-Image-Set-v1.0.zip?rlkey=7bhva23z55dxyngtqrj54kus4&dl=1)**
+
+Unzip and place the contents so the folder structure matches what the Pocket uses:
 
 ```
 demodata/
-├── library/
-│   └── Images/
-│       ├── GB/     ← *.bin files from the Pocket Library
-│       └── GBC/
-└── playedgames/
-    ├── list.bin
-    └── playtimes.bin
+└── library/
+    └── Images/
+        ├── GB/     ← *.bin cover files
+        ├── GBC/
+        └── GBA/
 ```
 
-The paths in `compose.local.yaml` already point to `./demodata/...` by default.
+Then point the `POCKET_LIBRARY_DIR` volume at `./demodata/library` in `compose.local.yaml`. Play time data (`list.bin` / `playtimes.bin`) must come from a real Pocket SD card or be uploaded via the Pocket Sync page.
 
 ---
 
