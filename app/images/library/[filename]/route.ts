@@ -113,7 +113,7 @@ export async function GET(
   const png = convertBin(found.binPath, found.platform);
   if (!png) return new NextResponse(null, { status: 422 });
 
-  return new NextResponse(png, {
+  return new NextResponse(new Uint8Array(png), {
     headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" },
   });
 }
