@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
   fs.writeFileSync(path.join(playedDir, "list.bin"), Buffer.from(await listBin.arrayBuffer()));
   fs.writeFileSync(path.join(playedDir, "playtimes.bin"), Buffer.from(await playtimesBin.arrayBuffer()));
 
-  const beforeMap = new Map<string, Game>(readGames().map((g) => [g.id, g]));
+  const beforeGames = readGames();
+  const beforeMap = new Map<string, Game>(beforeGames.map((g) => [g.id, g]));
+
+  // Snapshot vor dem Sync: playtime pro game id
+  const snapshot: Record<string, number> = {};
+  for (const g of beforeGames) snapshot[g.id] = g.playtime ?? 0;
 
   try {
     const python = process.env.PYTHON_BIN ?? "python3";
@@ -65,7 +70,7 @@ export async function POST(req: NextRequest) {
     const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");
     fs.writeFileSync(
       path.join(process.cwd(), "data", "last-sync.json"),
-      JSON.stringify({ syncedAt: new Date().toISOString() })
+      JSON.stringify({ syncedAt: new Date().toISOString(), snapshot })
     );
     return NextResponse.json({ ok: true, output, changes });
   } catch (err: unknown) {

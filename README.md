@@ -193,10 +193,10 @@ Returns a digest of collection activity — useful for displaying what has been 
     "daysAgo": 49
   },
   "newlyAdded": [
-    { "id": "tetris", "title": "Tetris", "platform": "GB", "status": "playing", "createdAt": "2026-04-28T14:35:00.000Z" }
+    { "id": "kirby", "title": "Kirby's Dream Land", "platform": "GB", "status": "playing", "playtime": 42 }
   ],
   "recentlyPlayed": [
-    { "id": "tetris", "title": "Tetris", "platform": "GB", "status": "playing", "playtime": 320, "rating": 5 }
+    { "id": "tetris", "title": "Tetris", "platform": "GB", "status": "playing", "playtime": 320, "playtimeDelta": 45, "rating": 5 }
   ],
   "stats": {
     "totalGames": 42,
@@ -209,8 +209,8 @@ Returns a digest of collection activity — useful for displaying what has been 
 }
 ```
 
-- `newlyAdded` — games added since the last Pocket Sync import
-- `recentlyPlayed` — top 10 games by total playtime (minutes)
+- `newlyAdded` — games that appear for the first time in this Pocket Sync (not in the pre-sync snapshot)
+- `recentlyPlayed` — top 10 games by playtime gained since the last sync (`playtimeDelta` = minutes added); falls back to all-time top 10 if no snapshot exists yet
 - `lastSync.syncedAt` is `null` if no Pocket Sync has been performed yet
 
 ---
