@@ -41,7 +41,12 @@ yarn-error.log*
 next-env.d.ts
 
 # App data (mount via Docker volumes on NAS)
+/_data/
 /data/games.json
+/data/game_db.json
+/data/ai-cache.json
+/data/last-sync.json
+/data/settings.json
 /data/library-images/
 /data/cartridges/
 /public/cartridges/
