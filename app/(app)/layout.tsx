@@ -1,5 +1,3 @@
-import AuthButton from "@/app/components/AuthButton";
-import AddGameButton from "@/app/components/AddGameButton";
 import GameBoyIcon from "@/app/components/GameBoyIcon";
 import HeaderNav from "@/app/components/HeaderNav";
 import { redirect } from "next/navigation";
@@ -27,9 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </a>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <AuthButton />
           <HeaderNav />
-          <AddGameButton />
         </div>
       </header>
       <main>{children}</main>

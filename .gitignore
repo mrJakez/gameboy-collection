@@ -50,3 +50,10 @@ next-env.d.ts
 
 # Demo-Daten Inhalte (Ordner selbst per .gitkeep tracken)
 /data/analogue-pocket-playedgames/
+/data/screenshots/*.png
+/data/screenshots/*.jpg
+/data/screenshots/*.jpeg
+/data/screenshots/*.bmp
+/data/screenshots/*.gif
+/data/screenshot-meta.json
+/analogue-pocket-screenshots/

@@ -221,10 +221,25 @@ function LibrarySearch({ onSelect }: { onSelect: (entry: LibraryEntry) => void }
   );
 }
 
+interface DuplicateMatch {
+  id: string;
+  title: string;
+  platform: string;
+  status: string;
+  similarity: number;
+  method: "exact" | "fuzzy" | "ai";
+  reason?: string;
+}
+
 export default function NewGamePage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [selectedLibEntry, setSelectedLibEntry] = useState<LibraryEntry | null>(null);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [dupMethod, setDupMethod] = useState<"local" | "ai" | null>(null);
+  const [dupLoading, setDupLoading] = useState(false);
+  const [aiChecked, setAiChecked] = useState(false);
+  const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState({
     title: "",
     year: 0,
@@ -238,6 +253,22 @@ export default function NewGamePage() {
 
   function set(key: string, value: unknown) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function checkDuplicates(title: string, platform: string, ai = false) {
+    if (dupTimer.current) clearTimeout(dupTimer.current);
+    if (!title.trim() || title.length < 2) { setDuplicates([]); setDupMethod(null); return; }
+    setDupLoading(true);
+    dupTimer.current = setTimeout(async () => {
+      const res = await fetch(
+        `/api/games/duplicate-check?title=${encodeURIComponent(title)}&platform=${encodeURIComponent(platform)}${ai ? "&ai=1" : ""}`
+      );
+      const data = await res.json();
+      setDuplicates(data.duplicates ?? []);
+      setDupMethod(data.method);
+      setDupLoading(false);
+      if (ai) setAiChecked(true);
+    }, ai ? 0 : 400);
   }
 
   function handleLibrarySelect(entry: LibraryEntry) {
@@ -325,10 +356,74 @@ export default function NewGamePage() {
                 type="text"
                 required
                 value={form.title}
-                onChange={(e) => set("title", e.target.value)}
+                onChange={(e) => {
+                  set("title", e.target.value);
+                  setAiChecked(false);
+                  checkDuplicates(e.target.value, form.platform);
+                }}
                 className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
                 placeholder="e.g. Pokémon Red"
               />
+
+              {/* Duplicate check results + AI button */}
+              {form.title.length >= 2 && (
+                <div className="mt-2 space-y-2">
+                  {/* Status row */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-zinc-600">
+                      {dupLoading
+                        ? "Checking…"
+                        : duplicates.length === 0 && dupMethod
+                          ? `No duplicates found${dupMethod === "ai" ? " · AI checked" : ""}.`
+                          : null}
+                    </p>
+                    {!dupLoading && !aiChecked && (
+                      <button
+                        type="button"
+                        onClick={() => checkDuplicates(form.title, form.platform, true)}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 rounded-md px-2 py-0.5 transition-colors"
+                      >
+                        ✦ Check with AI
+                      </button>
+                    )}
+                    {!dupLoading && aiChecked && duplicates.length === 0 && (
+                      <span className="text-[11px] text-green-600">✓ AI: no duplicate</span>
+                    )}
+                  </div>
+
+                  {/* Match list */}
+                  {!dupLoading && duplicates.length > 0 && (
+                    <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl overflow-hidden">
+                      <p className="px-3 py-2 text-xs font-medium text-amber-400 border-b border-amber-700/30">
+                        {duplicates.some(d => d.method === "exact")
+                          ? "⚠ Exact match in your collection"
+                          : `Possible duplicate${duplicates.length > 1 ? "s" : ""} — via ${dupMethod === "ai" ? "AI" : "fuzzy match"}`}
+                      </p>
+                      {duplicates.map(d => (
+                        <a
+                          key={d.id}
+                          href={`/games/${d.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-amber-900/20 transition-colors"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm text-zinc-200 truncate">{d.title}</p>
+                            {d.reason && <p className="text-[10px] text-zinc-500 truncate">{d.reason}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] text-zinc-500">{d.platform}</span>
+                            <span className="text-[10px] text-zinc-600 border border-zinc-700 rounded px-1.5 py-0.5">{d.status}</span>
+                            <span className="text-[10px] text-amber-500/70">
+                              {d.method === "exact" ? "exact" : d.method === "ai" ? "AI" : `${Math.round(d.similarity * 100)}%`}
+                            </span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

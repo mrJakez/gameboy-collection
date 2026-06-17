@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { formatScreenshotDateTime } from "@/lib/screenshot-date";
 
 interface SyncChange {
   title: string;
@@ -18,31 +19,60 @@ const REMINDER_OPTIONS: { label: string; days: number | null }[] = [
   { label: "Disabled", days: null },
 ];
 
+function fmtFilename(filename: string): string {
+  const dt = formatScreenshotDateTime(filename);
+  if (!dt) return filename;
+  return `${dt.date} · ${dt.time}`;
+}
+
 export default function PocketSyncPage() {
   const router = useRouter();
   const [lastSync, setLastSync] = useState<string | null | undefined>(undefined);
   const [overdue, setOverdue] = useState(false);
   const [reminderDays, setReminderDays] = useState<number | null>(30);
   const [authenticated, setAuthenticated] = useState(false);
+
+  // .bin files state
   const [listFile, setListFile] = useState<File | null>(null);
   const [playtimesFile, setPlaytimesFile] = useState<File | null>(null);
-  const [listDragging, setListDragging] = useState(false);
-  const [playtimesDragging, setPlaytimesDragging] = useState(false);
+  const [binDragging, setBinDragging] = useState(false);
+  const [binError, setBinError] = useState("");
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [output, setOutput] = useState("");
   const [error, setError] = useState("");
   const [changes, setChanges] = useState<SyncChange[]>([]);
-  const listRef = useRef<HTMLInputElement>(null);
-  const playtimesRef = useRef<HTMLInputElement>(null);
+  const binInputRef = useRef<HTMLInputElement>(null);
+
+  // Screenshots state
+  const [latestScreenshot, setLatestScreenshot] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | { error: string } | null>(null);
+  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
+  const [uploadResult, setUploadResult] = useState<string | null>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/sync-status").then(r => r.json()).then(d => {
       setLastSync(d.syncedAt ?? null);
       setOverdue(d.overdue ?? false);
       setReminderDays(d.syncReminderDays ?? 30);
+      setLatestScreenshot(d.latestScreenshot ?? null);
     });
     fetch("/api/auth").then(r => r.json()).then(d => setAuthenticated(d.authenticated));
   }, []);
+
+  function acceptBinFiles(files: FileList | File[]) {
+    setBinError("");
+    const arr = Array.from(files);
+    const valid = arr.filter(f => f.name.endsWith(".bin"));
+    const invalid = arr.filter(f => !f.name.endsWith(".bin"));
+    if (invalid.length) setBinError(`Ignored ${invalid.length} non-.bin file${invalid.length > 1 ? "s" : ""}.`);
+    for (const f of valid) {
+      if (f.name === "list.bin") setListFile(f);
+      else if (f.name === "playtimes.bin") setPlaytimesFile(f);
+      else setBinError(prev => prev ? prev : `Unknown file: ${f.name} (expected list.bin or playtimes.bin)`);
+    }
+  }
 
   async function handleReminderChange(days: number | null) {
     setReminderDays(days);
@@ -59,22 +89,18 @@ export default function PocketSyncPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleBinSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!listFile || !playtimesFile) return;
-
     setStatus("uploading");
     setOutput("");
     setError("");
     setChanges([]);
-
     const fd = new FormData();
     fd.append("list", listFile);
     fd.append("playtimes", playtimesFile);
-
     const res = await fetch("/api/pocket-sync", { method: "POST", body: fd });
     const data = await res.json();
-
     if (res.ok) {
       setStatus("done");
       setOutput(data.output ?? "");
@@ -88,7 +114,38 @@ export default function PocketSyncPage() {
     }
   }
 
-  const ready = listFile && playtimesFile;
+  async function handleImportScreenshots() {
+    setImporting(true);
+    setImportResult(null);
+    const res = await fetch("/api/screenshots/import", { method: "POST" });
+    const data = await res.json();
+    setImporting(false);
+    if (res.ok) {
+      setImportResult({ imported: data.imported, skipped: data.skipped });
+      if (data.imported > 0) {
+        // Refresh latest screenshot info
+        fetch("/api/sync-status").then(r => r.json()).then(d => setLatestScreenshot(d.latestScreenshot ?? null));
+      }
+    } else {
+      setImportResult({ error: data.error ?? "Import failed." });
+    }
+  }
+
+  async function handleScreenshotUpload(files: FileList | null) {
+    if (!files || !files.length) return;
+    setUploadResult(null);
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    const res = await fetch("/api/screenshots", { method: "POST", body: fd });
+    if (res.ok) {
+      setUploadResult(`${files.length} file${files.length !== 1 ? "s" : ""} uploaded.`);
+      fetch("/api/sync-status").then(r => r.json()).then(d => setLatestScreenshot(d.latestScreenshot ?? null));
+    } else {
+      setUploadResult("Upload failed.");
+    }
+  }
+
+  const binReady = listFile && playtimesFile;
 
   return (
     <div className="max-w-xl mx-auto">
@@ -114,7 +171,7 @@ export default function PocketSyncPage() {
         )}
       </div>
       <p className="text-xs text-zinc-500 mb-4">
-        Import play times and games from your Analogue Pocket SD card.
+        Import play times, games, and screenshots from your Analogue Pocket.
       </p>
 
       {/* Overdue banner */}
@@ -129,96 +186,167 @@ export default function PocketSyncPage() {
         </div>
       )}
 
-      {/* Hint box */}
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-6 text-sm text-zinc-400">
-        <p className="font-medium text-zinc-300 mb-2">Where to find the files?</p>
-        <p className="mb-1">On your Analogue Pocket SD card under:</p>
-        <code className="block bg-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono mt-2">
-          System/Played Games/list.bin<br />
-          System/Played Games/playtimes.bin
-        </code>
+      {/* ── Section 1: Game data (.bin files) ── */}
+      <div className="mb-8">
+        <p className="text-sm font-semibold text-zinc-200 mb-1">Game data</p>
+        <p className="text-xs text-zinc-500 mb-3">
+          Drag both files at once, or click to browse.
+        </p>
+
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-3 mb-4 text-xs text-zinc-500">
+          <span className="text-zinc-400 font-medium">SD card path: </span>
+          <code className="font-mono text-zinc-400">System/Played Games/</code>
+          <span className="ml-1 text-zinc-600">list.bin · playtimes.bin</span>
+        </div>
+
+        <form onSubmit={handleBinSubmit} className="space-y-3">
+          {/* Combined drop zone */}
+          <div
+            onClick={() => binInputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setBinDragging(true); }}
+            onDragLeave={() => setBinDragging(false)}
+            onDrop={e => { e.preventDefault(); setBinDragging(false); acceptBinFiles(e.dataTransfer.files); }}
+            className={`border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors ${
+              binDragging ? "border-blue-500 bg-blue-950/20"
+              : (listFile && playtimesFile) ? "border-green-600 bg-green-950/20"
+              : (listFile || playtimesFile) ? "border-amber-600/60 bg-amber-950/10"
+              : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
+            }`}
+          >
+            <input
+              ref={binInputRef}
+              type="file"
+              accept=".bin"
+              multiple
+              className="hidden"
+              onChange={e => acceptBinFiles(e.target.files ?? [])}
+            />
+            {!listFile && !playtimesFile ? (
+              <div className="text-center">
+                <p className="text-zinc-400 text-sm">{binDragging ? "Drop .bin files here" : "Drop list.bin + playtimes.bin here"}</p>
+                <p className="text-xs text-zinc-600 mt-1">Click to browse · Select both files at once</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className={`flex items-center gap-2 text-sm ${listFile ? "text-green-400" : "text-zinc-600"}`}>
+                  <span>{listFile ? "✓" : "○"}</span>
+                  <span>{listFile ? `${listFile.name} · ${(listFile.size / 1024).toFixed(1)} KB` : "list.bin missing"}</span>
+                </div>
+                <div className={`flex items-center gap-2 text-sm ${playtimesFile ? "text-green-400" : "text-zinc-600"}`}>
+                  <span>{playtimesFile ? "✓" : "○"}</span>
+                  <span>{playtimesFile ? `${playtimesFile.name} · ${(playtimesFile.size / 1024).toFixed(1)} KB` : "playtimes.bin missing"}</span>
+                </div>
+                {(!listFile || !playtimesFile) && (
+                  <p className="text-xs text-zinc-600 pt-1">Drop or click to add the missing file.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {binError && <p className="text-xs text-amber-400">{binError}</p>}
+
+          <button
+            type="submit"
+            disabled={!binReady || status === "uploading"}
+            className="w-full py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-zinc-100 rounded-lg transition-colors"
+          >
+            {status === "uploading" ? "Importing…" : "Import game data"}
+          </button>
+        </form>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* list.bin */}
-        <div
-          onClick={() => listRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setListDragging(true); }}
-          onDragLeave={() => setListDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setListDragging(false);
-            const file = e.dataTransfer.files[0];
-            if (file) setListFile(file);
-          }}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            listDragging ? "border-blue-500 bg-blue-950/20"
-            : listFile ? "border-green-600 bg-green-950/20"
-            : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
-          }`}
-        >
-          <input ref={listRef} type="file" accept=".bin" className="hidden"
-            onChange={(e) => setListFile(e.target.files?.[0] ?? null)} />
-          {listFile ? (
-            <>
-              <p className="text-green-400 text-sm font-medium">✓ {listFile.name}</p>
-              <p className="text-xs text-zinc-500 mt-1">{(listFile.size / 1024).toFixed(1)} KB</p>
-            </>
+      {/* ── Section 2: Screenshots ── */}
+      <div className="mb-8 border-t border-zinc-800 pt-6">
+        <p className="text-sm font-semibold text-zinc-200 mb-1">Screenshots</p>
+        <p className="text-xs text-zinc-500 mb-3">
+          Import screenshots from your Analogue Pocket.
+        </p>
+
+        {/* Latest screenshot info */}
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-3 mb-4 text-xs">
+          {latestScreenshot ? (
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <span className="text-zinc-500">Latest imported: </span>
+                <span className="text-zinc-300 font-medium">{fmtFilename(latestScreenshot)}</span>
+              </div>
+              <span className="text-zinc-600 font-mono shrink-0">{latestScreenshot}</span>
+            </div>
           ) : (
-            <>
-              <p className="text-zinc-400 text-sm">{listDragging ? "Drop list.bin here" : "Select list.bin"}</p>
-              <p className="text-xs text-zinc-600 mt-1">Click to browse or drag & drop</p>
-            </>
+            <p className="text-zinc-600">No screenshots imported yet.</p>
           )}
         </div>
 
-        {/* playtimes.bin */}
-        <div
-          onClick={() => playtimesRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setPlaytimesDragging(true); }}
-          onDragLeave={() => setPlaytimesDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setPlaytimesDragging(false);
-            const file = e.dataTransfer.files[0];
-            if (file) setPlaytimesFile(file);
-          }}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            playtimesDragging ? "border-blue-500 bg-blue-950/20"
-            : playtimesFile ? "border-green-600 bg-green-950/20"
-            : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
-          }`}
-        >
-          <input ref={playtimesRef} type="file" accept=".bin" className="hidden"
-            onChange={(e) => setPlaytimesFile(e.target.files?.[0] ?? null)} />
-          {playtimesFile ? (
-            <>
-              <p className="text-green-400 text-sm font-medium">✓ {playtimesFile.name}</p>
-              <p className="text-xs text-zinc-500 mt-1">{(playtimesFile.size / 1024).toFixed(1)} KB</p>
-            </>
-          ) : (
-            <>
-              <p className="text-zinc-400 text-sm">{playtimesDragging ? "Drop playtimes.bin here" : "Select playtimes.bin"}</p>
-              <p className="text-xs text-zinc-600 mt-1">Click to browse or drag & drop</p>
-            </>
-          )}
+        <div className="space-y-3">
+          {/* Import from folder */}
+          <div>
+            <p className="text-xs text-zinc-500 mb-2">
+              Copy screenshots to the mounted folder, then import:
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs font-mono text-zinc-400 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 truncate">
+                /analogue-pocket-screenshots/
+              </code>
+              <button
+                onClick={handleImportScreenshots}
+                disabled={importing}
+                className="shrink-0 px-3 py-2 text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+              >
+                {importing ? "Importing…" : "Import from folder"}
+              </button>
+            </div>
+            {importResult && (
+              <p className="text-xs mt-2 text-zinc-400">
+                {"error" in importResult
+                  ? <span className="text-red-400">{importResult.error}</span>
+                  : importResult.imported === 0
+                    ? "No new screenshots found."
+                    : `${importResult.imported} screenshot${importResult.imported !== 1 ? "s" : ""} imported${importResult.skipped > 0 ? `, ${importResult.skipped} skipped` : ""}.`
+                }
+              </p>
+            )}
+          </div>
+
+          {/* Web upload */}
+          <div>
+            <p className="text-xs text-zinc-500 mb-2">
+              {latestScreenshot
+                ? <>Or upload manually — only files <span className="text-zinc-300 font-medium">after {fmtFilename(latestScreenshot)}</span> are new.</>
+                : "Or upload screenshot files directly:"}
+            </p>
+            <div
+              onDragOver={e => { e.preventDefault(); setScreenshotsDragging(true); }}
+              onDragLeave={() => setScreenshotsDragging(false)}
+              onDrop={e => { e.preventDefault(); setScreenshotsDragging(false); handleScreenshotUpload(e.dataTransfer.files); }}
+              onClick={() => screenshotInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
+                screenshotsDragging ? "border-blue-500 bg-blue-950/20" : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40"
+              }`}
+            >
+              <input
+                ref={screenshotInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={e => handleScreenshotUpload(e.target.files)}
+              />
+              <p className="text-zinc-400 text-sm">{screenshotsDragging ? "Drop screenshots here" : "Drop or click to upload screenshots"}</p>
+              <p className="text-xs text-zinc-600 mt-1">PNG, JPG, BMP, GIF</p>
+            </div>
+            {uploadResult && (
+              <p className="text-xs mt-2 text-zinc-400">{uploadResult}</p>
+            )}
+          </div>
         </div>
+      </div>
 
-        <button
-          type="submit"
-          disabled={!ready || status === "uploading"}
-          className="w-full py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-zinc-100 rounded-lg transition-colors"
-        >
-          {status === "uploading" ? "Importing…" : "Import"}
-        </button>
-      </form>
-
-      {/* Reminder interval — only for authenticated users */}
+      {/* Sync reminder */}
       {authenticated && (
-        <div className="mt-8 border-t border-zinc-800 pt-6">
+        <div className="border-t border-zinc-800 pt-6 mb-8">
           <p className="text-sm font-medium text-zinc-300 mb-1">Sync reminder</p>
           <p className="text-xs text-zinc-500 mb-3">
-            A reminder appears in the navigation when no sync has happened within the selected interval.
+            A reminder appears in the navigation when neither game data nor screenshots have been updated within the selected interval.
           </p>
           <div className="flex flex-wrap gap-2">
             {REMINDER_OPTIONS.map((opt) => (
@@ -240,7 +368,7 @@ export default function PocketSyncPage() {
 
       {/* Result */}
       {status === "done" && (
-        <div className="mt-6 space-y-4">
+        <div className="space-y-4">
           <div className="bg-green-950/30 border border-green-800 rounded-xl p-4">
             <p className="text-green-400 text-sm font-medium">Import complete</p>
             {changes.length === 0 && (
@@ -288,7 +416,7 @@ export default function PocketSyncPage() {
       )}
 
       {status === "error" && (
-        <div className="mt-6 bg-red-950/30 border border-red-800 rounded-xl p-4">
+        <div className="bg-red-950/30 border border-red-800 rounded-xl p-4">
           <p className="text-red-400 text-sm font-medium mb-1">Import failed</p>
           <p className="text-xs text-zinc-400 mb-3">{error}</p>
           {output && (

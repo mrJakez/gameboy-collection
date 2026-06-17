@@ -4,6 +4,27 @@ import path from "path";
 
 const FILE = path.join(process.cwd(), "data", "last-sync.json");
 const SETTINGS_FILE = path.join(process.cwd(), "data", "settings.json");
+const SCREENSHOTS_DIR = path.join(process.cwd(), "data", "screenshots");
+
+function parseScreenshotTimestamp(filename: string): Date | null {
+  const m = filename.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+  if (!m) return null;
+  return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`);
+}
+
+function latestScreenshotDate(): string | null {
+  try {
+    if (!fs.existsSync(SCREENSHOTS_DIR)) return null;
+    const files = fs.readdirSync(SCREENSHOTS_DIR);
+    let latest: Date | null = null;
+    let latestFile: string | null = null;
+    for (const f of files) {
+      const d = parseScreenshotTimestamp(f);
+      if (d && (!latest || d > latest)) { latest = d; latestFile = f; }
+    }
+    return latestFile ?? null;
+  } catch { return null; }
+}
 
 export async function GET() {
   let syncedAt: string | null = null;
@@ -21,10 +42,18 @@ export async function GET() {
     }
   } catch { /* ignore */ }
 
-  const overdue =
-    syncReminderDays !== null &&
-    (syncedAt === null ||
-      Date.now() - new Date(syncedAt).getTime() > syncReminderDays * 86_400_000);
+  const latestScreenshot = latestScreenshotDate();
+  let latestScreenshotAt: string | null = null;
+  if (latestScreenshot) {
+    const d = parseScreenshotTimestamp(latestScreenshot);
+    if (d) latestScreenshotAt = d.toISOString();
+  }
 
-  return NextResponse.json({ syncedAt, syncReminderDays, overdue });
+  const isOverdueFor = (ts: string | null) =>
+    syncReminderDays !== null &&
+    (ts === null || Date.now() - new Date(ts).getTime() > syncReminderDays * 86_400_000);
+
+  const overdue = isOverdueFor(syncedAt) || isOverdueFor(latestScreenshotAt);
+
+  return NextResponse.json({ syncedAt, syncReminderDays, overdue, latestScreenshot, latestScreenshotAt });
 }

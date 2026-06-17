@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CartridgeSVG from "@/app/components/CartridgeSVG";
 import CropEditor, { type Box } from "@/app/components/CropEditor";
+import { formatScreenshotDateTime } from "@/lib/screenshot-date";
 import {
   Game,
   STATUS_LABELS,
@@ -114,6 +115,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const [screenshots, setScreenshots] = useState<{ filename: string; gameId: string | null }[]>([]);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [processingLabel, setProcessingLabel] = useState(false);
@@ -138,6 +141,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
         setLoading(false);
         if (!data.cartridgeImage && data.libraryImage) setImageView("cover");
       });
+    fetch("/api/screenshots")
+      .then(r => r.json())
+      .then(d => setScreenshots(d.screenshots ?? []));
     checkAuth();
   }, [id, checkAuth]);
 
@@ -600,6 +606,36 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
+          {/* Pocket Screenshots */}
+          {(() => {
+            const gameScreenshots = screenshots.filter(s => s.gameId === id);
+            if (gameScreenshots.length === 0) return null;
+            return (
+              <div className="mt-6">
+                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-3">
+                  Pocket Screenshots <span className="normal-case text-zinc-700">· {gameScreenshots.length}</span>
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                  {gameScreenshots.map(s => (
+                    <div
+                      key={s.filename}
+                      onClick={() => setLightboxImg(s.filename)}
+                      className="aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-600 cursor-pointer transition-all"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/screenshots/${encodeURIComponent(s.filename)}`}
+                        alt={s.filename}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* AI Info */}
           <AiSection
             gameId={game.id}
@@ -612,6 +648,47 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
 
         </>
       )}
+
+      {/* Screenshot lightbox */}
+      {lightboxImg && (() => {
+        const gameScreenshots = screenshots.filter(s => s.gameId === id);
+        const idx = gameScreenshots.findIndex(s => s.filename === lightboxImg);
+        const dt = formatScreenshotDateTime(lightboxImg);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center" onClick={() => setLightboxImg(null)}>
+            <div className="absolute top-4 left-0 right-0 text-center px-12" onClick={e => e.stopPropagation()}>
+              {dt ? (
+                <>
+                  <p className="text-lg font-semibold text-zinc-100">{dt.date} · {dt.time}</p>
+                  <p className="text-xs text-zinc-600 mt-0.5">{lightboxImg}</p>
+                </>
+              ) : (
+                <p className="text-sm text-zinc-400">{lightboxImg}</p>
+              )}
+            </div>
+            <button onClick={e => { e.stopPropagation(); setLightboxImg(null); }}
+              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 text-2xl leading-none">✕</button>
+            {idx > 0 && (
+              <button onClick={e => { e.stopPropagation(); setLightboxImg(gameScreenshots[idx - 1].filename); }}
+                className="absolute left-4 p-2 text-3xl text-zinc-400 hover:text-zinc-100">‹</button>
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/screenshots/${encodeURIComponent(lightboxImg)}`}
+              alt={lightboxImg}
+              className="max-h-[75vh] max-w-[90vw] object-contain rounded-sm"
+              style={{ imageRendering: "pixelated", minWidth: "min(640px, 80vw)", minHeight: "min(480px, 50vh)" }}
+              onClick={e => e.stopPropagation()}
+            />
+            {idx < gameScreenshots.length - 1 && (
+              <button onClick={e => { e.stopPropagation(); setLightboxImg(gameScreenshots[idx + 1].filename); }}
+                className="absolute right-4 p-2 text-3xl text-zinc-400 hover:text-zinc-100">›</button>
+            )}
+            <p className="absolute bottom-4 text-xs text-zinc-600">{idx + 1} / {gameScreenshots.length}</p>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }
@@ -901,7 +978,6 @@ function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authentic
           )}
         </div>
       )}
-
 
     </div>
   );

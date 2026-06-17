@@ -4,15 +4,15 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # App-Daten (alle beweglichen Daten)
+      # App data (all persistent data)
       - ./data:/app/data
 
-      # Analogue Pocket Library (read-only mount vom SD-Karten-Inhalt)
+      # Analogue Pocket Library (read-only mount from SD card contents)
       - ./analogue-pocket-library:/analogue-pocket-library:ro   # Library/Images/GB|GBA|GBC/*.bin
-      # Optional: ROM-Sammlung für Titelzuordnung aller Library-Bilder
-      # - /pfad/zu/roms:/roms:ro
+
+      # Analogue Pocket Screenshots (optional, read-only)
+      # - ./analogue-pocket-screenshots:/analogue-pocket-screenshots:ro
     environment:
       - NODE_ENV=production
       - ADMIN_PASSWORD=linux666
-      # - ROMS_DIR=/roms
     restart: unless-stopped
