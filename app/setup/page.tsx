@@ -529,12 +529,12 @@ export default function SetupPage() {
             )}
 
             <div className="flex gap-3 pt-1">
-              <button onClick={() => router.push("/")}
+              <button onClick={() => window.location.href = "/"}
                 className="flex-1 py-2.5 bg-zinc-100 hover:bg-white text-zinc-900 text-sm font-medium rounded-lg transition-colors">
                 Go to collection →
               </button>
               {pocketStatus !== "done" && (
-                <button onClick={() => router.push("/")}
+                <button onClick={() => window.location.href = "/"}
                   className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors">
                   Skip for now
                 </button>
