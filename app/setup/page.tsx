@@ -578,7 +578,7 @@ export default function SetupPage() {
               <p className="text-zinc-500 mb-3 font-sans font-medium not-italic">Why am I seeing Setup?</p>
               <div className="space-y-1.5">
                 <Row label="Working directory" value={String(debugInfo.cwd)} />
-                <Row label="Data directory" value={String(debugInfo.dataDir)} ok={!!debugInfo.dataDirExists} />
+                <Row label="Data directory" value={String(debugInfo.dataDir)} ok={!!debugInfo.dataDirExists} warn={!debugInfo.dataDirExists} />
                 <Row label="data/ contents" value={
                   Array.isArray(debugInfo.dataContents)
                     ? debugInfo.dataContents.length === 0 ? "(empty)" : (debugInfo.dataContents as string[]).join(", ")
@@ -587,9 +587,20 @@ export default function SetupPage() {
                 <Row label="game_db.json" value={
                   debugInfo.dbExists
                     ? `✓ found (${((debugInfo.dbSize as number) / 1024).toFixed(0)} KB)`
-                    : "✗ not found — this triggers the setup redirect"
+                    : "✗ not found"
                 } ok={!!debugInfo.dbExists} warn={!debugInfo.dbExists} />
+                <Row label="layout.tsx check" value={
+                  debugInfo.layoutWouldRedirect
+                    ? "✗ would redirect to /setup ← this is the problem"
+                    : "✓ would show collection"
+                } ok={!debugInfo.layoutWouldRedirect} warn={!!debugInfo.layoutWouldRedirect} />
+                <Row label="games.json" value={
+                  debugInfo.gamesCount !== null
+                    ? `✓ found (${debugInfo.gamesCount} games)`
+                    : "not found"
+                } ok={debugInfo.gamesCount !== null} />
                 <Row label="NODE_ENV" value={String(debugInfo.nodeEnv ?? "—")} />
+                <Row label="Process ID" value={String(debugInfo.pid ?? "—")} />
               </div>
             </div>
           )}
