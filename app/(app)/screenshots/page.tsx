@@ -650,7 +650,13 @@ export default function ScreenshotsPage() {
               <div className="min-w-0">
                 {game
                   ? <>
-                      <p className="text-base font-semibold text-zinc-100 truncate">{game.title}</p>
+                      <a
+                        href={`/games/${game.id}`}
+                        className="text-base font-semibold text-zinc-100 hover:text-white underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors truncate block"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {game.title}
+                      </a>
                       <p className="text-xs text-zinc-500">{game.platform}</p>
                     </>
                   : <p className="text-sm text-zinc-600">Unassigned</p>

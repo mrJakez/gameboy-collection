@@ -611,10 +611,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             const gameScreenshots = screenshots.filter(s => s.gameId === id);
             if (gameScreenshots.length === 0) return null;
             return (
-              <div className="mt-6">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-3">
-                  Pocket Screenshots <span className="normal-case text-zinc-700">· {gameScreenshots.length}</span>
-                </p>
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-semibold text-zinc-300">Pocket Screenshots</h2>
+                  <span className="text-[10px] text-zinc-600">{gameScreenshots.length} image{gameScreenshots.length !== 1 ? "s" : ""}</span>
+                </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                   {gameScreenshots.map(s => (
                     <div
@@ -856,22 +857,22 @@ function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authentic
   return (
     <div className="mb-8">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">AI</span>
-        <div className="flex-1 h-px bg-zinc-800" />
-        {loaded && info?.cachedAt && (
-          <span className="text-[10px] text-zinc-600">Cached {formatCacheDate(info.cachedAt)}</span>
-        )}
-        {loaded && authenticated && (
-          <button
-            onClick={resetCache}
-            className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors ml-1"
-            title="Reset AI cache"
-          >
-            ↺ Reset
-          </button>
-        )}
-        {!loaded && <span className="text-[10px] text-zinc-600 italic">Generated · may be inaccurate</span>}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h2 className="text-sm font-semibold text-zinc-300">External Info</h2>
+        <div className="flex items-center gap-2">
+          {loaded && info?.cachedAt && (
+            <span className="text-[10px] text-zinc-600">Cached {formatCacheDate(info.cachedAt)}</span>
+          )}
+          {loaded && authenticated && (
+            <button
+              onClick={resetCache}
+              className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors"
+              title="Reset AI cache"
+            >
+              ↺ Reset
+            </button>
+          )}
+        </div>
       </div>
 
       {!loaded && !loading && (
