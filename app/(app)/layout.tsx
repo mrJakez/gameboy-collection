@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import fs from "fs";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const dbExists = fs.existsSync(path.join(process.cwd(), "data", "game_db.json"));
   if (!dbExists) redirect("/setup");
