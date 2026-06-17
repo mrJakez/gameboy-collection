@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const LIBRARY_IMAGES_DIR = "/analogue-pocket-library/Images";
+const LIBRARY_IMAGES_DIR = fs.existsSync("/analogue-pocket-library/Images")
+  ? "/analogue-pocket-library/Images"
+  : path.join(process.cwd(), "analogue-pocket-library", "Images");
 
 function findLibCrc(romCrc: string): string | null {
   for (const platform of ["GBA", "GBC", "GB"]) {

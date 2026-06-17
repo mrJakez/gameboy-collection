@@ -29,7 +29,10 @@ export default function PocketSyncPage() {
   const router = useRouter();
   const [lastSync, setLastSync] = useState<string | null | undefined>(undefined);
   const [overdue, setOverdue] = useState(false);
+  const [binOverdue, setBinOverdue] = useState(false);
+  const [screenshotOverdue, setScreenshotOverdue] = useState(false);
   const [reminderDays, setReminderDays] = useState<number | null>(30);
+  const [screenshotBannerDismissed, setScreenshotBannerDismissed] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
 
   // .bin files state
@@ -55,10 +58,13 @@ export default function PocketSyncPage() {
     fetch("/api/sync-status").then(r => r.json()).then(d => {
       setLastSync(d.syncedAt ?? null);
       setOverdue(d.overdue ?? false);
+      setBinOverdue(d.binOverdue ?? false);
+      setScreenshotOverdue(d.screenshotOverdue ?? false);
       setReminderDays(d.syncReminderDays ?? 30);
       setLatestScreenshot(d.latestScreenshot ?? null);
     });
     fetch("/api/auth").then(r => r.json()).then(d => setAuthenticated(d.authenticated));
+    setScreenshotBannerDismissed(localStorage.getItem("screenshotBannerDismissed") === "1");
   }, []);
 
   function acceptBinFiles(files: FileList | File[]) {
@@ -174,15 +180,34 @@ export default function PocketSyncPage() {
         Import play times, games, and screenshots from your Analogue Pocket.
       </p>
 
-      {/* Overdue banner */}
+      {/* Overdue / info banners */}
       {overdue && (
         <div className="bg-amber-950/40 border border-amber-700 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
           <span className="text-amber-400 text-lg leading-none">⏰</span>
           <p className="text-sm text-amber-300">
             {lastSync === null
               ? "You haven't synced yet. Upload your Pocket data to get started."
-              : "Your Pocket data is due for a sync. Upload the latest files to stay up to date."}
+              : binOverdue && screenshotOverdue
+                ? "Your play time data and screenshots are both due for an update."
+                : binOverdue
+                  ? "Your play time data is due for a sync. Upload the latest list.bin and playtimes.bin."
+                  : "Your screenshots haven't been imported recently."}
           </p>
+        </div>
+      )}
+      {!overdue && lastSync !== null && latestScreenshot === null && !screenshotBannerDismissed && (
+        <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+          <span className="text-zinc-400 text-lg leading-none">📷</span>
+          <p className="text-sm text-zinc-400 flex-1">
+            No screenshots imported yet. Import screenshots to build a visual archive of your gaming moments.
+          </p>
+          <button
+            onClick={() => { setScreenshotBannerDismissed(true); localStorage.setItem("screenshotBannerDismissed", "1"); }}
+            className="shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors text-lg leading-none"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
         </div>
       )}
 

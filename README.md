@@ -46,6 +46,16 @@ A sortable leaderboard of all played titles with progress bar, total play time a
   - Filter state persisted in the URL — navigating back restores the last search
   - Clickable stat tiles as quick filters
 - **Play time view** with ranking, sorting and "hide completed" toggle
+- **Screenshots** — manage in-game screenshots taken with the Analogue Pocket
+  - Import directly from a folder on the server, or upload via the web UI on the Pocket Sync page
+  - Filter by assigned / unassigned / favorites
+  - Mass-select with rubber-band drag, then assign all selected to a game at once
+  - Soft delete (files stay on disk, marked as deleted in metadata)
+  - Star any screenshot as a highlight/favorite
+  - Assign screenshots to games; assigned game name and platform shown in the lightbox
+  - Duplicate detection via perceptual hashing (average hash 8×8, Hamming distance ≤ 4) with real-time progress
+  - Sync reminder covers both play-time data and the age of the latest screenshot
+- **Duplicate game check** — when adding a new game, local fuzzy matching (Levenshtein) and optional AI check (gpt-4o-mini) flag likely duplicates before you save
 - **AI game info** *(requires OpenAI API key)* — per-game panel with game description, developer/publisher/genre, press review scores pulled from Wikipedia, gameplay screenshots, and a YouTube link. Results are cached locally so each title is only fetched once.
 - **AI cartridge label crop** *(requires OpenAI API key)* — when uploading a cartridge photo, the AI automatically detects and crops the label area.
 - **Password protection** — reading is always public, editing requires login
@@ -158,7 +168,7 @@ SD card/System/Played Games/playtimes.bin
 
 The uploaded files are stored in `data/analogue-pocket-playedgames/` and processed immediately. Play times are merged intelligently — if the Pocket shows less time than stored (e.g. after a reset), the values are added rather than overwritten.
 
-A **sync reminder** appears as an amber dot on the Pocket Sync button in the navigation when no sync has happened within the configured interval. The default is 30 days. You can change the interval — or disable the reminder entirely — on the Pocket Sync page:
+A **sync reminder** appears as an amber dot on the Pocket Sync button in the navigation when neither play-time data nor screenshots have been updated within the configured interval. The default is 30 days. You can change the interval — or disable the reminder entirely — on the Pocket Sync page:
 
 | Interval | Description |
 |---|---|
@@ -167,6 +177,40 @@ A **sync reminder** appears as an amber dot on the Pocket Sync button in the nav
 | Monthly *(default)* | Suitable for casual sessions |
 | Every 3 months | For occasional play |
 | Disabled | No reminder shown |
+
+---
+
+### Screenshots
+
+The **Pocket Sync** page is the central hub for importing screenshots taken with the Analogue Pocket.
+
+**Import from folder** — if you mount the Pocket's `System/Screenshots/` folder on the server, click "Import from folder" to copy all new images into `data/screenshots/` in one step.
+
+**Web upload** — drag and drop PNG files directly onto the upload area on the Pocket Sync page, or use the file picker.
+
+Once imported, screenshots are managed on the **Screenshots** page:
+
+| Feature | How to use |
+|---|---|
+| **Assign to game** | Open a screenshot in the lightbox — the assigned game is shown at the bottom. Use the assign wizard (mass-select mode) to assign multiple screenshots at once. |
+| **Mass-select** | Click "Select" to enter wizard mode. Draw a rubber-band selection over thumbnails, or click individual ones. Then pick a game from the dropdown to assign all selected. |
+| **Favorites** | Click the star (☆) in the lightbox to mark a screenshot as a highlight. Favorites are shown with a star on the thumbnail and can be filtered via the "★ Favorites" tab. |
+| **Soft delete** | Click the trash icon in the lightbox. The file stays on disk but is hidden everywhere in the UI. |
+| **Duplicate check** | Go to Screenshots → "Duplicates". Click "Run duplicate check" to scan all screenshots with perceptual hashing. Near-identical images are grouped; you can soft-delete duplicates directly from the results. |
+| **Filter** | Use the tabs at the top: All · Assigned · Unassigned · ★ Favorites |
+
+Screenshot metadata (game assignment, deleted flag, highlight flag) is stored in `data/screenshot-meta.json`. Screenshot image files are stored in `data/screenshots/`.
+
+**Optional: mount the Pocket screenshots folder**
+
+To make "Import from folder" work, mount the folder from your SD card next to `compose.yaml`:
+
+```yaml
+volumes:
+  - ./analogue-pocket-screenshots:/analogue-pocket-screenshots:ro
+```
+
+Copy `System/Screenshots/` from the SD card to `./analogue-pocket-screenshots/` on the server. The app reads from this folder but never writes to it.
 
 ---
 
@@ -299,7 +343,7 @@ Mount the folder as `./analogue-pocket-library:/analogue-pocket-library:ro` in `
 
 ## Backup
 
-The entire database lives in `data/games.json`. Cover art and photos are in `data/library/` and `data/cartridges/`. A simple backup:
+The entire database lives in `data/games.json`. Cover art and photos are in `data/library/` and `data/cartridges/`. Screenshots and their metadata are in `data/screenshots/` and `data/screenshot-meta.json`. A simple backup:
 
 ```bash
 cp -r data/ data-backup-$(date +%Y%m%d)/

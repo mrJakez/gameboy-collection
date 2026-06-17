@@ -3,7 +3,9 @@ import fs from "fs";
 import path from "path";
 import zlib from "zlib";
 
-const LIBRARY_IMAGES_DIR = "/analogue-pocket-library/Images";
+const LIBRARY_IMAGES_DIR = fs.existsSync("/analogue-pocket-library/Images")
+  ? "/analogue-pocket-library/Images"
+  : path.join(process.cwd(), "analogue-pocket-library", "Images");
 
 const PUBLIC_LIBRARY = path.join(process.cwd(), "data", "library-images");
 

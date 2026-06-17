@@ -53,7 +53,9 @@ export async function GET() {
     syncReminderDays !== null &&
     (ts === null || Date.now() - new Date(ts).getTime() > syncReminderDays * 86_400_000);
 
-  const overdue = isOverdueFor(syncedAt) || isOverdueFor(latestScreenshotAt);
+  const binOverdue = isOverdueFor(syncedAt);
+  const screenshotOverdue = latestScreenshot !== null && isOverdueFor(latestScreenshotAt);
+  const overdue = binOverdue || screenshotOverdue;
 
-  return NextResponse.json({ syncedAt, syncReminderDays, overdue, latestScreenshot, latestScreenshotAt });
+  return NextResponse.json({ syncedAt, syncReminderDays, overdue, binOverdue, screenshotOverdue, latestScreenshot, latestScreenshotAt });
 }

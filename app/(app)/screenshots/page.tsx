@@ -266,19 +266,23 @@ export default function ScreenshotsPage() {
 
   const unassigned = screenshots.filter(s => !s.gameId).length;
 
+  const isEmpty = !screenshotsLoading && screenshots.length === 0;
+
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-zinc-100">Screenshots</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {screenshots.length} screenshot{screenshots.length !== 1 ? "s" : ""}
-            {unassigned > 0 && <span className="text-zinc-600"> · {unassigned} unassigned</span>}
-          </p>
+          {!isEmpty && (
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {screenshots.length} screenshot{screenshots.length !== 1 ? "s" : ""}
+              {unassigned > 0 && <span className="text-zinc-600"> · {unassigned} unassigned</span>}
+            </p>
+          )}
         </div>
 
-        {authenticated && !selectMode && (
+        {authenticated && !selectMode && !isEmpty && (
           <div className="flex items-center gap-2">
             <a
               href="/screenshots/duplicates"
@@ -349,24 +353,26 @@ export default function ScreenshotsPage() {
         </div>
       )}
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 mb-6">
-        {([
-          { key: "all", label: "All" },
-          { key: "unassigned", label: "Unassigned" },
-          { key: "assigned", label: "Assigned" },
-          { key: "highlights", label: "★ Favorites" },
-        ] as { key: Filter; label: string }[]).map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              filter === f.key
-                ? f.key === "highlights" ? "bg-amber-400 text-zinc-900" : "bg-zinc-100 text-zinc-900"
-                : f.key === "highlights" ? "text-amber-500 hover:text-amber-300" : "text-zinc-400 hover:text-zinc-200"
-            }`}>
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {/* Filter tabs — only when screenshots exist */}
+      {!isEmpty && (
+        <div className="flex gap-1 mb-6">
+          {([
+            { key: "all", label: "All" },
+            { key: "unassigned", label: "Unassigned" },
+            { key: "assigned", label: "Assigned" },
+            { key: "highlights", label: "★ Favorites" },
+          ] as { key: Filter; label: string }[]).map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                filter === f.key
+                  ? f.key === "highlights" ? "bg-amber-400 text-zinc-900" : "bg-zinc-100 text-zinc-900"
+                  : f.key === "highlights" ? "text-amber-500 hover:text-amber-300" : "text-zinc-400 hover:text-zinc-200"
+              }`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Grid */}
       {screenshotsLoading ? (
@@ -375,13 +381,36 @@ export default function ScreenshotsPage() {
             <div key={i} className="aspect-square rounded-lg bg-zinc-800/60 animate-pulse" />
           ))}
         </div>
+      ) : isEmpty ? (
+        <div className="mt-4 max-w-lg mx-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <svg className="w-8 h-8 text-zinc-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                <circle cx="12" cy="13" r="3"/>
+              </svg>
+              <p className="text-sm font-semibold text-zinc-300">No screenshots yet</p>
+            </div>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              The Analogue Pocket saves a screenshot every time you press the screenshot button while playing. Import them here to build a visual archive of your gaming moments.
+            </p>
+            <ul className="space-y-1.5 text-xs text-zinc-500">
+              <li className="flex items-start gap-2"><span className="text-zinc-600 mt-0.5">•</span><span>Assign screenshots to individual games in your collection</span></li>
+              <li className="flex items-start gap-2"><span className="text-zinc-600 mt-0.5">•</span><span>Mark favorites to highlight your best captures</span></li>
+              <li className="flex items-start gap-2"><span className="text-zinc-600 mt-0.5">•</span><span>Detect and clean up duplicates automatically</span></li>
+              <li className="flex items-start gap-2"><span className="text-zinc-600 mt-0.5">•</span><span>Browse all screenshots per game on the game detail page</span></li>
+            </ul>
+            <a
+              href="/pocket-sync"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-zinc-200 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 hover:border-zinc-500 transition-colors"
+            >
+              Go to Pocket Sync →
+            </a>
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-zinc-600">
-          <p className="text-4xl mb-3">📷</p>
-          <p className="text-sm">{selectMode ? "No unassigned screenshots." : "No screenshots yet."}</p>
-          {authenticated && !selectMode && (
-            <p className="text-xs mt-2">Import from SD card or upload files above.</p>
-          )}
+        <div className="text-center py-20 text-zinc-500">
+          <p className="text-sm text-zinc-500">{selectMode ? "No unassigned screenshots." : "No screenshots here."}</p>
         </div>
       ) : (
         <div
