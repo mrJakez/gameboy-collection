@@ -69,6 +69,8 @@ export default function ScreenshotsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [authenticated, setAuthenticated] = useState(false);
   const [screenshotsLoading, setScreenshotsLoading] = useState(true);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedCount, setDeletedCount] = useState(0);
   const [lightbox, setLightbox] = useState<Screenshot | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [gameSearch, setGameSearch] = useState("");
@@ -78,6 +80,8 @@ export default function ScreenshotsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wizardGameSearch, setWizardGameSearch] = useState("");
   const [wizardAssigning, setWizardAssigning] = useState(false);
+  const [wizardActiveIndex, setWizardActiveIndex] = useState(-1);
+  const [lightboxActiveIndex, setLightboxActiveIndex] = useState(-1);
 
   // Rubber-band drag selection
   const thumbRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -85,12 +89,14 @@ export default function ScreenshotsPage() {
   const isDraggingSelect = useRef(false);
   const [dragRect, setDragRect] = useState<DragRect | null>(null);
 
-  const load = useCallback(() => {
-    fetch("/api/screenshots").then(r => r.json()).then(d => { setScreenshots(d.screenshots ?? []); setScreenshotsLoading(false); });
+  const load = useCallback((deleted = false) => {
+    const url = deleted ? "/api/screenshots?deleted=1" : "/api/screenshots";
+    fetch(url).then(r => r.json()).then(d => { setScreenshots(d.screenshots ?? []); setScreenshotsLoading(false); });
+    if (!deleted) fetch("/api/screenshots?deleted=1").then(r => r.json()).then(d => setDeletedCount((d.screenshots ?? []).length));
   }, []);
 
   useEffect(() => {
-    load();
+    load(showDeleted);
     fetch("/api/auth").then(r => r.json()).then(d => setAuthenticated(d.authenticated));
     fetch("/api/public/games").then(r => r.json()).then(d =>
       setGames((d.games ?? []).sort((a: Game, b: Game) => a.title.localeCompare(b.title)))
@@ -223,6 +229,22 @@ export default function ScreenshotsPage() {
     setWizardAssigning(false);
   }
 
+  async function deleteSelected() {
+    setWizardAssigning(true);
+    await Promise.all(
+      [...selected].map(filename =>
+        fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deleted: true }),
+        })
+      )
+    );
+    setScreenshots(prev => prev.filter(s => !selected.has(s.filename)));
+    setSelected(new Set());
+    setWizardAssigning(false);
+  }
+
   async function assign(filename: string, gameId: string | null) {
     setAssigning(true);
     await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
@@ -253,7 +275,27 @@ export default function ScreenshotsPage() {
       body: JSON.stringify({ deleted: true }),
     });
     setScreenshots(prev => prev.filter(s => s.filename !== filename));
+    setDeletedCount(c => c + 1);
     if (lightbox?.filename === filename) setLightbox(null);
+  }
+
+  async function restoreScreenshot(filename: string) {
+    await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deleted: false }),
+    });
+    setScreenshots(prev => prev.filter(s => s.filename !== filename));
+    setDeletedCount(c => Math.max(0, c - 1));
+    if (lightbox?.filename === filename) setLightbox(null);
+  }
+
+  function toggleShowDeleted() {
+    const next = !showDeleted;
+    setShowDeleted(next);
+    setScreenshotsLoading(true);
+    setLightbox(null);
+    load(next);
   }
 
   const gameForId = (id: string | null) => id ? games.find(g => g.id === id) : null;
@@ -302,7 +344,7 @@ export default function ScreenshotsPage() {
 
       {/* Wizard assign bar */}
       {selectMode && (
-        <div className="sticky top-0 z-30 mb-4 bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap shadow-xl">
+        <div className="sticky top-3 z-30 mb-4 bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap shadow-xl">
           <p className="text-sm text-zinc-300 shrink-0">
             {selected.size === 0
               ? <span className="text-zinc-500">Click or drag to select screenshots</span>
@@ -316,23 +358,37 @@ export default function ScreenshotsPage() {
               >
                 Clear
               </button>
+              <button
+                onClick={deleteSelected}
+                disabled={wizardAssigning}
+                className="text-xs text-red-500 hover:text-red-400 border border-red-900/60 hover:border-red-700 rounded-lg px-2.5 py-1 transition-colors shrink-0 disabled:opacity-40"
+              >
+                Delete
+              </button>
               <div className="relative flex-1 min-w-[200px]">
                 <input
                   type="text"
                   placeholder="Search game to assign…"
                   value={wizardGameSearch}
-                  onChange={e => setWizardGameSearch(e.target.value)}
+                  onChange={e => { setWizardGameSearch(e.target.value); setWizardActiveIndex(-1); }}
                   disabled={wizardAssigning}
+                  onKeyDown={e => {
+                    const list = wizardFilteredGames.slice(0, 12);
+                    if (e.key === "ArrowDown") { e.preventDefault(); setWizardActiveIndex(i => Math.min(i + 1, list.length - 1)); }
+                    else if (e.key === "ArrowUp") { e.preventDefault(); setWizardActiveIndex(i => Math.max(i - 1, -1)); }
+                    else if (e.key === "Enter" && wizardActiveIndex >= 0 && list[wizardActiveIndex]) { e.preventDefault(); assignSelected(list[wizardActiveIndex].id); }
+                    else if (e.key === "Escape") { setWizardGameSearch(""); setWizardActiveIndex(-1); }
+                  }}
                   className="w-full h-8 px-3 bg-zinc-800 border border-amber-700/60 rounded-lg text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 disabled:opacity-50"
                 />
                 {wizardGameSearch.length > 0 && wizardFilteredGames.length > 0 && (
                   <div className="absolute top-full mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden shadow-xl max-h-60 overflow-y-auto z-40">
-                    {wizardFilteredGames.slice(0, 12).map(g => (
+                    {wizardFilteredGames.slice(0, 12).map((g, i) => (
                       <button
                         key={g.id}
                         disabled={wizardAssigning}
                         onClick={() => assignSelected(g.id)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition-colors ${i === wizardActiveIndex ? "bg-zinc-600" : "hover:bg-zinc-700"}`}
                       >
                         <span className="text-xs text-zinc-500 shrink-0 w-10">{g.platform}</span>
                         <span className="truncate">{g.title}</span>
@@ -355,7 +411,8 @@ export default function ScreenshotsPage() {
 
       {/* Filter tabs — only when screenshots exist */}
       {!isEmpty && (
-        <div className="flex gap-1 mb-6">
+        <div className="flex items-center justify-between mb-6">
+        <div className="flex gap-1">
           {([
             { key: "all", label: "All" },
             { key: "unassigned", label: "Unassigned" },
@@ -371,6 +428,15 @@ export default function ScreenshotsPage() {
               {f.label}
             </button>
           ))}
+        </div>
+        {authenticated && (deletedCount > 0 || showDeleted) && (
+          <button
+            onClick={toggleShowDeleted}
+            className={`text-xs transition-colors ${showDeleted ? "text-red-400 hover:text-zinc-400" : "text-zinc-600 hover:text-zinc-400"}`}
+          >
+            {showDeleted ? "← Back" : `${deletedCount} deleted`}
+          </button>
+        )}
         </div>
       )}
 
@@ -521,17 +587,28 @@ export default function ScreenshotsPage() {
               <div className="flex items-center gap-1">
                 {authenticated && (
                   <>
-                    <button
-                      onClick={() => toggleHighlight(lightbox.filename, !lightbox.highlight)}
-                      className={`p-1.5 transition-colors ${lightbox.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
-                      title={lightbox.highlight ? "Remove highlight" : "Mark as highlight"}
-                    >
-                      <StarIcon filled={lightbox.highlight} />
-                    </button>
-                    <button onClick={() => deleteScreenshot(lightbox.filename)}
-                      className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors">
-                      <TrashIcon />
-                    </button>
+                    {showDeleted ? (
+                      <button
+                        onClick={() => restoreScreenshot(lightbox.filename)}
+                        className="px-3 py-1 text-xs text-zinc-300 hover:text-zinc-100 border border-zinc-700 hover:border-zinc-500 rounded-lg transition-colors"
+                      >
+                        Restore
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => toggleHighlight(lightbox.filename, !lightbox.highlight)}
+                          className={`p-1.5 transition-colors ${lightbox.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
+                          title={lightbox.highlight ? "Remove highlight" : "Mark as highlight"}
+                        >
+                          <StarIcon filled={lightbox.highlight} />
+                        </button>
+                        <button onClick={() => deleteScreenshot(lightbox.filename)}
+                          className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors">
+                          <TrashIcon />
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
                 <button onClick={() => setLightbox(null)} className="p-1.5 text-zinc-400 hover:text-zinc-100 transition-colors ml-1">

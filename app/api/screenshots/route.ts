@@ -18,13 +18,14 @@ export function writeMeta(m: Record<string, ScreenshotMeta>) {
   fs.writeFileSync(META_FILE, JSON.stringify(m, null, 2));
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   const meta = readMeta();
+  const showDeleted = new URL(req.url).searchParams.get("deleted") === "1";
 
   const files = fs.existsSync(SCREENSHOTS_DIR)
     ? fs.readdirSync(SCREENSHOTS_DIR)
-        .filter((f) => ALLOWED_EXT.has(path.extname(f).toLowerCase()) && !meta[f]?.deleted)
+        .filter((f) => ALLOWED_EXT.has(path.extname(f).toLowerCase()) && (showDeleted ? !!meta[f]?.deleted : !meta[f]?.deleted))
         .sort()
     : [];
 

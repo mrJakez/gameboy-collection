@@ -110,6 +110,17 @@ function StepIndicator({ current, steps }: { current: number; steps: { label: st
   );
 }
 
+// ─── Debug helper ─────────────────────────────────────────────────────────────
+
+function Row({ label, value, ok, warn }: { label: string; value: string; ok?: boolean; warn?: boolean }) {
+  return (
+    <div className="flex gap-2">
+      <span className="text-zinc-600 shrink-0 w-36">{label}</span>
+      <span className={warn ? "text-red-400" : ok ? "text-green-400" : "text-zinc-300 break-all"}>{value}</span>
+    </div>
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LibraryStatus { hasImages: boolean; total: number; converted: number; }
@@ -165,12 +176,18 @@ export default function SetupPage() {
 
   // Auth gate
   const [gateState, setGateState] = useState<"checking" | "locked" | "unlocked">("checking");
+  const [dbExists, setDbExists] = useState(false);
+
+  // Debug info
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/setup").then(r => r.json()),
       fetch("/api/auth").then(r => r.json()),
     ]).then(([setup, auth]) => {
+      setDbExists(setup.exists);
       if (!setup.exists) { setGateState("unlocked"); return; }        // first run
       if (auth.authenticated) { setGateState("unlocked"); return; }   // already logged in
       setGateState("locked");
@@ -362,6 +379,12 @@ export default function SetupPage() {
                   className="w-full py-2.5 bg-zinc-100 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed text-zinc-900 text-sm font-medium rounded-lg transition-colors mt-2">
                   {xmlStatus === "loading" ? "Processing…" : "Generate Database"}
                 </button>
+                {dbExists && (
+                  <button type="button" onClick={goToLibraryStep}
+                    className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors">
+                    Database already imported — skip →
+                  </button>
+                )}
               </form>
             )}
           </div>
@@ -396,6 +419,10 @@ export default function SetupPage() {
                 <button onClick={startConversion}
                   className="w-full py-2.5 bg-zinc-100 hover:bg-white text-zinc-900 text-sm font-medium rounded-lg transition-colors">
                   Convert library images
+                </button>
+                <button onClick={() => setStep("pocket")}
+                  className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors">
+                  Skip for now
                 </button>
               </div>
             )}
@@ -519,6 +546,54 @@ export default function SetupPage() {
         <p className="text-center text-xs text-zinc-600 mt-4">
           You can re-run setup anytime at <span className="font-mono">/setup</span>
         </p>
+
+        {/* Version info */}
+        {(process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_TIME) && (
+          <p className="text-center text-[11px] text-zinc-800 font-mono mt-3">
+            {process.env.NEXT_PUBLIC_BUILD_SHA && <>#{process.env.NEXT_PUBLIC_BUILD_SHA}</>}
+            {process.env.NEXT_PUBLIC_BUILD_SHA && process.env.NEXT_PUBLIC_BUILD_TIME && <> · </>}
+            {process.env.NEXT_PUBLIC_BUILD_TIME && (() => {
+              const d = new Date(process.env.NEXT_PUBLIC_BUILD_TIME!);
+              return <>{d.toLocaleString("de-DE", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })} MEZ</>;
+            })()}
+          </p>
+        )}
+
+        {/* Debug panel */}
+        <div className="mt-6">
+          <button
+            onClick={async () => {
+              if (!debugInfo) {
+                const res = await fetch("/api/setup/debug");
+                setDebugInfo(await res.json());
+              }
+              setDebugOpen(o => !o);
+            }}
+            className="w-full text-xs text-zinc-700 hover:text-zinc-500 transition-colors py-1"
+          >
+            {debugOpen ? "▲ Hide diagnostics" : "▼ Show diagnostics"}
+          </button>
+          {debugOpen && debugInfo && (
+            <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2 text-xs font-mono">
+              <p className="text-zinc-500 mb-3 font-sans font-medium not-italic">Why am I seeing Setup?</p>
+              <div className="space-y-1.5">
+                <Row label="Working directory" value={String(debugInfo.cwd)} />
+                <Row label="Data directory" value={String(debugInfo.dataDir)} ok={!!debugInfo.dataDirExists} />
+                <Row label="data/ contents" value={
+                  Array.isArray(debugInfo.dataContents)
+                    ? debugInfo.dataContents.length === 0 ? "(empty)" : (debugInfo.dataContents as string[]).join(", ")
+                    : "—"
+                } />
+                <Row label="game_db.json" value={
+                  debugInfo.dbExists
+                    ? `✓ found (${((debugInfo.dbSize as number) / 1024).toFixed(0)} KB)`
+                    : "✗ not found — this triggers the setup redirect"
+                } ok={!!debugInfo.dbExists} warn={!debugInfo.dbExists} />
+                <Row label="NODE_ENV" value={String(debugInfo.nodeEnv ?? "—")} />
+              </div>
+            </div>
+          )}
+        </div>
         </>)}
       </div>
     </div>
