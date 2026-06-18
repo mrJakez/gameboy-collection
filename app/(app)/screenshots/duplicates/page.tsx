@@ -94,8 +94,11 @@ export default function ScreenshotDuplicatesPage() {
       </a>
 
       <h2 className="text-xl font-bold text-zinc-100 mb-1">Duplicate screenshots</h2>
-      <p className="text-xs text-zinc-500 mb-6">
+      <p className="text-xs text-zinc-500 mb-1">
         Find duplicate or near-duplicate images using perceptual hashing.
+      </p>
+      <p className="text-xs text-zinc-600 mb-6">
+        Results are not 100% accurate — the check finds visually similar images, not just exact copies. Use it as a starting point to clean up your library.
       </p>
 
       <button

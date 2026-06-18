@@ -3,6 +3,7 @@
   "configurations": [
     {
       "name": "gameboy-collection",
+      "cwd": "/Users/jakez/pdev/gameboy-collection",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3001

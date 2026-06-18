@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { formatScreenshotDate, formatScreenshotDateTime as _fmtDT } from "@/lib/screenshot-date";
+import LightboxOverlay from "@/app/components/LightboxOverlay";
 
 function fmtDateTime(filename: string): string | null {
   const dt = _fmtDT(filename);
@@ -35,6 +36,14 @@ function XIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   );
 }
@@ -88,6 +97,8 @@ export default function ScreenshotsPage() {
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const isDraggingSelect = useRef(false);
   const [dragRect, setDragRect] = useState<DragRect | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressOrigin = useRef<{ x: number; y: number } | null>(null);
 
   const load = useCallback((deleted = false) => {
     const url = deleted ? "/api/screenshots?deleted=1" : "/api/screenshots";
@@ -103,20 +114,7 @@ export default function ScreenshotsPage() {
     );
   }, [load]);
 
-  // Keyboard nav in lightbox
-  useEffect(() => {
-    if (!lightbox) return;
-    const visible = filtered;
-    const idx = visible.findIndex(s => s.filename === lightbox.filename);
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setLightbox(null);
-      if (e.key === "ArrowRight" && idx < visible.length - 1) setLightbox(visible[idx + 1]);
-      if (e.key === "ArrowLeft" && idx > 0) setLightbox(visible[idx - 1]);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lightbox, filter, screenshots]);
+
 
   // Escape to exit select mode
   useEffect(() => {
@@ -172,11 +170,69 @@ export default function ScreenshotsPage() {
       }
     };
 
+    const onTouchMove = (e: TouchEvent) => {
+      // Cancel long-press if finger moved too much before threshold
+      if (longPressOrigin.current && !isDraggingSelect.current) {
+        const touch = e.touches[0];
+        const dx = Math.abs(touch.clientX - longPressOrigin.current.x);
+        const dy = Math.abs(touch.clientY - longPressOrigin.current.y);
+        if (dx > 8 || dy > 8) {
+          if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+          longPressOrigin.current = null;
+        }
+        return;
+      }
+      if (!dragStart.current || !isDraggingSelect.current) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      setDragRect({
+        x1: Math.min(dragStart.current.x, t.clientX),
+        y1: Math.min(dragStart.current.y, t.clientY),
+        x2: Math.max(dragStart.current.x, t.clientX),
+        y2: Math.max(dragStart.current.y, t.clientY),
+      });
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+      longPressOrigin.current = null;
+      if (!dragStart.current || !isDraggingSelect.current) return;
+      isDraggingSelect.current = false;
+      const t = e.changedTouches[0];
+      const rect: DragRect = {
+        x1: Math.min(dragStart.current.x, t.clientX),
+        y1: Math.min(dragStart.current.y, t.clientY),
+        x2: Math.max(dragStart.current.x, t.clientX),
+        y2: Math.max(dragStart.current.y, t.clientY),
+      };
+      dragStart.current = null;
+      setDragRect(null);
+      if (rect.x2 - rect.x1 < 5 && rect.y2 - rect.y1 < 5) return;
+      const toAdd: string[] = [];
+      thumbRefs.current.forEach((el, filename) => {
+        const b = el.getBoundingClientRect();
+        if (b.left < rect.x2 && b.right > rect.x1 && b.top < rect.y2 && b.bottom > rect.y1) {
+          toAdd.push(filename);
+        }
+      });
+      if (toAdd.length > 0) {
+        setSelected(prev => {
+          const next = new Set(prev);
+          toAdd.forEach(f => next.add(f));
+          return next;
+        });
+      }
+    };
+
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
     };
   }, [selectMode]);
 
@@ -486,6 +542,16 @@ export default function ScreenshotsPage() {
             dragStart.current = { x: e.clientX, y: e.clientY };
             isDraggingSelect.current = true;
           } : undefined}
+          onTouchStart={selectMode ? (e) => {
+            if ((e.target as HTMLElement).closest("[data-thumb]")) return;
+            const t = e.touches[0];
+            longPressOrigin.current = { x: t.clientX, y: t.clientY };
+            longPressTimer.current = setTimeout(() => {
+              dragStart.current = longPressOrigin.current;
+              isDraggingSelect.current = true;
+              navigator.vibrate?.(30);
+            }, 400);
+          } : undefined}
         >
           {filtered.map(s => {
             const game = gameForId(s.gameId);
@@ -502,6 +568,15 @@ export default function ScreenshotsPage() {
                   dragStart.current = { x: e.clientX, y: e.clientY };
                   isDraggingSelect.current = true;
                 } : undefined}
+                onTouchStart={selectMode ? (e) => {
+                  const t = e.touches[0];
+                  longPressOrigin.current = { x: t.clientX, y: t.clientY };
+                  longPressTimer.current = setTimeout(() => {
+                    dragStart.current = longPressOrigin.current;
+                    isDraggingSelect.current = true;
+                    navigator.vibrate?.(30);
+                  }, 400);
+                } : undefined}
                 onClick={selectMode
                   ? (e) => { e.stopPropagation(); toggleSelect(s.filename); }
                   : () => { setLightbox(s); setGameSearch(""); }
@@ -517,8 +592,10 @@ export default function ScreenshotsPage() {
                   src={`/api/screenshots/${encodeURIComponent(s.filename)}`}
                   alt={s.filename}
                   className="w-full h-full object-cover"
+                  style={{ WebkitTouchCallout: "none" }}
                   loading="lazy"
                   draggable={false}
+                  onContextMenu={e => e.preventDefault()}
                 />
                 {/* Bottom overlay: game name + date */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1.5">
@@ -572,99 +649,79 @@ export default function ScreenshotsPage() {
         const idx = visible.findIndex(s => s.filename === lightbox.filename);
         const game = gameForId(lightbox.gameId);
         return (
-          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col" onClick={() => setLightbox(null)}>
-            {/* Top bar */}
-            <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={e => e.stopPropagation()}>
-              <div className="min-w-0">
-                {fmtDateTime(lightbox.filename)
-                  ? <>
-                      <p className="text-sm font-semibold text-zinc-100">{fmtDateTime(lightbox.filename)}</p>
-                      <p className="text-[11px] text-zinc-600 mt-0.5 truncate">{lightbox.filename}</p>
-                    </>
-                  : <p className="text-xs text-zinc-400 truncate">{lightbox.filename}</p>
-                }
-              </div>
-              <div className="flex items-center gap-1">
-                {authenticated && (
-                  <>
-                    {showDeleted ? (
-                      <button
-                        onClick={() => restoreScreenshot(lightbox.filename)}
-                        className="px-3 py-1 text-xs text-zinc-300 hover:text-zinc-100 border border-zinc-700 hover:border-zinc-500 rounded-lg transition-colors"
-                      >
-                        Restore
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => toggleHighlight(lightbox.filename, !lightbox.highlight)}
-                          className={`p-1.5 transition-colors ${lightbox.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
-                          title={lightbox.highlight ? "Remove highlight" : "Mark as highlight"}
-                        >
-                          <StarIcon filled={lightbox.highlight} />
-                        </button>
-                        <button onClick={() => deleteScreenshot(lightbox.filename)}
-                          className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors">
-                          <TrashIcon />
-                        </button>
-                      </>
-                    )}
+          <LightboxOverlay
+            srcs={visible.map(s => `/api/screenshots/${encodeURIComponent(s.filename)}`)}
+            index={idx}
+            onClose={() => setLightbox(null)}
+            onIndexChange={i => { setLightbox(visible[i]); setGameSearch(""); }}
+            pixelated
+            imgStyle={{ minWidth: "min(640px, 90vw)", minHeight: "min(576px, 60vh)" }}
+            header={
+              fmtDateTime(lightbox.filename)
+                ? <>
+                    <p className="text-sm font-semibold text-zinc-100">{fmtDateTime(lightbox.filename)}</p>
+                    <p className="text-[11px] text-zinc-600 mt-0.5 truncate">{lightbox.filename}</p>
                   </>
-                )}
-                <button onClick={() => setLightbox(null)} className="p-1.5 text-zinc-400 hover:text-zinc-100 transition-colors ml-1">
-                  <XIcon />
-                </button>
-              </div>
-            </div>
-
-            {/* Image + nav */}
-            <div className="flex-1 flex items-center justify-center relative min-h-0 px-12">
-              {idx > 0 && (
-                <button
-                  onClick={e => { e.stopPropagation(); setLightbox(visible[idx - 1]); setGameSearch(""); }}
-                  className="absolute left-2 p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+                : <p className="text-xs text-zinc-400 truncate">{lightbox.filename}</p>
+            }
+            actions={
+              <>
+                <a
+                  href={`/api/screenshots/${encodeURIComponent(lightbox.filename)}`}
+                  download={lightbox.filename}
+                  className="p-5 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors"
+                  title="Download"
+                  onClick={e => e.stopPropagation()}
                 >
-                  ‹
-                </button>
-              )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/screenshots/${encodeURIComponent(lightbox.filename)}`}
-                alt={lightbox.filename}
-                className="max-h-full max-w-full object-contain rounded-sm"
-                style={{ imageRendering: "pixelated", minWidth: "min(640px, 90vw)", minHeight: "min(576px, 60vh)" }}
-                onClick={e => e.stopPropagation()}
-              />
-              {idx < visible.length - 1 && (
-                <button
-                  onClick={e => { e.stopPropagation(); setLightbox(visible[idx + 1]); setGameSearch(""); }}
-                  className="absolute right-2 p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
-                >
-                  ›
-                </button>
-              )}
-            </div>
-
-            {/* Bottom bar */}
-            <div className="shrink-0 px-4 py-3 border-t border-zinc-800 flex items-center justify-between gap-4" onClick={e => e.stopPropagation()}>
-              <div className="min-w-0">
-                {game
-                  ? <>
-                      <a
-                        href={`/games/${game.id}`}
-                        className="text-base font-semibold text-zinc-100 hover:text-white underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors truncate block"
-                        onClick={e => e.stopPropagation()}
+                  <DownloadIcon />
+                </a>
+                {authenticated && (
+                  showDeleted ? (
+                    <button
+                      onClick={() => restoreScreenshot(lightbox.filename)}
+                      className="px-3 py-1 text-xs text-zinc-300 hover:text-zinc-100 border border-zinc-700 hover:border-zinc-500 rounded-lg transition-colors"
+                    >
+                      Restore
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => toggleHighlight(lightbox.filename, !lightbox.highlight)}
+                        className={`p-5 sm:p-2 transition-colors ${lightbox.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
+                        title={lightbox.highlight ? "Remove highlight" : "Mark as highlight"}
                       >
-                        {game.title}
-                      </a>
-                      <p className="text-xs text-zinc-500">{game.platform}</p>
+                        <StarIcon filled={lightbox.highlight} />
+                      </button>
+                      <button onClick={() => deleteScreenshot(lightbox.filename)}
+                        className="p-5 sm:p-2 text-zinc-600 hover:text-red-400 transition-colors">
+                        <TrashIcon />
+                      </button>
                     </>
-                  : <p className="text-sm text-zinc-600">Unassigned</p>
-                }
+                  )
+                )}
+              </>
+            }
+            bottomBar={
+              <div className="px-4 py-3 border-t border-zinc-800 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  {game
+                    ? <>
+                        <a
+                          href={`/games/${game.id}`}
+                          className="text-base font-semibold text-zinc-100 hover:text-white underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors truncate block"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {game.title}
+                        </a>
+                        <p className="text-xs text-zinc-500">{game.platform}</p>
+                      </>
+                    : <p className="text-sm text-zinc-600">Unassigned</p>
+                  }
+                </div>
+                <p className="text-xs text-zinc-700 shrink-0">{idx + 1} / {visible.length}</p>
               </div>
-              <p className="text-xs text-zinc-700 shrink-0">{idx + 1} / {visible.length}</p>
-            </div>
-          </div>
+            }
+          />
         );
       })()}
     </div>

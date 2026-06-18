@@ -6,6 +6,7 @@ import Image from "next/image";
 import CartridgeSVG from "@/app/components/CartridgeSVG";
 import CropEditor, { type Box } from "@/app/components/CropEditor";
 import { formatScreenshotDateTime } from "@/lib/screenshot-date";
+import LightboxOverlay from "@/app/components/LightboxOverlay";
 import {
   Game,
   STATUS_LABELS,
@@ -18,6 +19,30 @@ import {
 } from "@/lib/games";
 
 const STATUSES: GameStatus[] = ["playing", "completed", "backlog", "wishlist"];
+
+function DownloadIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
 const PLATFORMS: Platform[] = ["GB", "GBC", "GBA"];
 
 function StatBox({ label, value, onClick, active }: { label: string; value: string | number; onClick?: () => void; active?: boolean }) {
@@ -115,8 +140,10 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-  const [screenshots, setScreenshots] = useState<{ filename: string; gameId: string | null }[]>([]);
+  const [screenshots, setScreenshots] = useState<{ filename: string; gameId: string | null; highlight: boolean }[]>([]);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [imageLightbox, setImageLightbox] = useState<string | null>(null);
+  const [cartridgeLightbox, setCartridgeLightbox] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [processingLabel, setProcessingLabel] = useState(false);
@@ -126,6 +153,26 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [detectedBox, setDetectedBox] = useState<Box | null>(null);
   const [manualMode, setManualMode] = useState(false);
   const [form, setForm] = useState<Partial<Game>>({});
+
+
+  async function toggleHighlight(filename: string, highlight: boolean) {
+    await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ highlight }),
+    });
+    setScreenshots(prev => prev.map(s => s.filename === filename ? { ...s, highlight } : s));
+  }
+
+  async function deleteScreenshot(filename: string) {
+    await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deleted: true }),
+    });
+    setScreenshots(prev => prev.filter(s => s.filename !== filename));
+    setLightboxImg(null);
+  }
 
   const checkAuth = useCallback(async () => {
     const r = await fetch("/api/auth");
@@ -181,8 +228,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     const createdAtRaw = form.createdAt as string;
     let createdAt: string | null = null;
     if (createdAtRaw) {
-      const m = createdAtRaw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-      createdAt = m ? new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`).toISOString() : (game?.createdAt ?? null);
+      const mDE = createdAtRaw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      const mISO = createdAtRaw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (mDE) createdAt = new Date(`${mDE[3]}-${mDE[2].padStart(2,"0")}-${mDE[1].padStart(2,"0")}`).toISOString();
+      else if (mISO) createdAt = new Date(createdAtRaw).toISOString();
+      else createdAt = game?.createdAt ?? null;
     }
     await patch({ ...form, purchasePrice: (form.purchasePrice as string) || null, createdAt });
     setSaving(false);
@@ -403,7 +453,10 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               {(!hasLibraryImg || imageView === "cartridge") ? (
                 /* Cartridge view */
                 hasCartridgeLabel ? (
-                  <div className="flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded-xl aspect-square">
+                  <div
+                    className="flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded-xl aspect-square cursor-zoom-in"
+                    onClick={() => setCartridgeLightbox(true)}
+                  >
                     <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
                   </div>
                 ) : (
@@ -435,7 +488,10 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 )
               ) : (
                 /* Cover view */
-                <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center aspect-[160/144]">
+                <div
+                  className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden relative flex items-center justify-center aspect-[160/144] cursor-zoom-in"
+                  onClick={() => setImageLightbox(game.libraryImage!)}
+                >
                   <Image
                     src={game.libraryImage!}
                     alt={game.title}
@@ -453,7 +509,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                     <span className="text-xs text-zinc-600 animate-pulse">Extracting label…</span>
                   ) : (
                     <>
-                      <label className="cursor-pointer">
+                      <label className="cursor-pointer inline-flex items-center">
                         <span className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">Replace</span>
                         <input
                           type="file"
@@ -655,41 +711,87 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
         const gameScreenshots = screenshots.filter(s => s.gameId === id);
         const idx = gameScreenshots.findIndex(s => s.filename === lightboxImg);
         const dt = formatScreenshotDateTime(lightboxImg);
+        const s = gameScreenshots[idx];
         return (
-          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center" onClick={() => setLightboxImg(null)}>
-            <div className="absolute top-4 left-0 right-0 text-center px-12" onClick={e => e.stopPropagation()}>
-              {dt ? (
+          <LightboxOverlay
+            srcs={gameScreenshots.map(gs => `/api/screenshots/${encodeURIComponent(gs.filename)}`)}
+            index={idx}
+            onClose={() => setLightboxImg(null)}
+            onIndexChange={i => setLightboxImg(gameScreenshots[i].filename)}
+            pixelated
+            imgStyle={{ minWidth: "min(640px, 80vw)", minHeight: "min(480px, 50vh)" }}
+            header={
+              dt ? (
                 <>
-                  <p className="text-lg font-semibold text-zinc-100">{dt.date} · {dt.time}</p>
-                  <p className="text-xs text-zinc-600 mt-0.5">{lightboxImg}</p>
+                  <p className="text-sm font-semibold text-zinc-100">{dt.date} · {dt.time}</p>
+                  <p className="text-[11px] text-zinc-600 mt-0.5 truncate">{lightboxImg}</p>
                 </>
               ) : (
-                <p className="text-sm text-zinc-400">{lightboxImg}</p>
-              )}
-            </div>
-            <button onClick={e => { e.stopPropagation(); setLightboxImg(null); }}
-              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 text-2xl leading-none">✕</button>
-            {idx > 0 && (
-              <button onClick={e => { e.stopPropagation(); setLightboxImg(gameScreenshots[idx - 1].filename); }}
-                className="absolute left-4 p-2 text-3xl text-zinc-400 hover:text-zinc-100">‹</button>
-            )}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/screenshots/${encodeURIComponent(lightboxImg)}`}
-              alt={lightboxImg}
-              className="max-h-[75vh] max-w-[90vw] object-contain rounded-sm"
-              style={{ imageRendering: "pixelated", minWidth: "min(640px, 80vw)", minHeight: "min(480px, 50vh)" }}
-              onClick={e => e.stopPropagation()}
-            />
-            {idx < gameScreenshots.length - 1 && (
-              <button onClick={e => { e.stopPropagation(); setLightboxImg(gameScreenshots[idx + 1].filename); }}
-                className="absolute right-4 p-2 text-3xl text-zinc-400 hover:text-zinc-100">›</button>
-            )}
-            <p className="absolute bottom-4 text-xs text-zinc-600">{idx + 1} / {gameScreenshots.length}</p>
-          </div>
+                <p className="text-xs text-zinc-400 truncate">{lightboxImg}</p>
+              )
+            }
+            actions={
+              <>
+                {s && (
+                  <a
+                    href={`/api/screenshots/${encodeURIComponent(s.filename)}`}
+                    download={s.filename}
+                    className="p-5 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors"
+                    title="Download"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <DownloadIcon />
+                  </a>
+                )}
+                {s && authenticated && (
+                  <>
+                    <button
+                      onClick={() => toggleHighlight(s.filename, !s.highlight)}
+                      className={`p-5 sm:p-2 transition-colors ${s.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
+                      title={s.highlight ? "Remove from favorites" : "Mark as favorite"}
+                    >
+                      <StarIcon filled={s.highlight} />
+                    </button>
+                    <button
+                      onClick={() => deleteScreenshot(s.filename)}
+                      className="p-5 sm:p-2 text-zinc-600 hover:text-red-400 transition-colors"
+                      title="Delete screenshot"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </>
+                )}
+              </>
+            }
+            bottomBar={
+              <div className="py-3 text-center">
+                <p className="text-xs text-zinc-600">{idx + 1} / {gameScreenshots.length}</p>
+              </div>
+            }
+          />
         );
       })()}
 
+      {/* Cartridge lightbox — full shell rendering */}
+      {cartridgeLightbox && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={() => setCartridgeLightbox(false)}>
+          <button onClick={() => setCartridgeLightbox(false)} className="absolute top-3 right-3 p-5 sm:p-2 text-zinc-400 hover:text-zinc-100 text-xl leading-none">✕</button>
+          <div className="w-[min(80vw,80vh)] h-[min(80vw,80vh)]" onClick={e => e.stopPropagation()}>
+            <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
+          </div>
+        </div>
+      )}
+
+      {/* Cover image lightbox */}
+      {imageLightbox && (
+        <LightboxOverlay
+          srcs={[imageLightbox]}
+          index={0}
+          onClose={() => setImageLightbox(null)}
+          onIndexChange={() => {}}
+          pixelated
+        />
+      )}
     </div>
   );
 }
@@ -728,18 +830,6 @@ function ScreenshotGallery({ urls }: { urls: string[] }) {
   const shown = urls.map((url, i) => ({ url, i })).filter((_, i) => visible[i]);
   const shownUrls = shown.map((s) => s.url);
 
-  useEffect(() => {
-    if (lightboxIdx === null) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") setLightboxIdx((i) => i !== null ? (i - 1 + shownUrls.length) % shownUrls.length : null);
-      if (e.key === "ArrowRight") setLightboxIdx((i) => i !== null ? (i + 1) % shownUrls.length : null);
-      if (e.key === "Escape") setLightboxIdx(null);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lightboxIdx, shownUrls.length]);
-
   if (shown.length === 0) return null;
 
   return (
@@ -765,43 +855,25 @@ function ScreenshotGallery({ urls }: { urls: string[] }) {
       </div>
 
       {lightboxIdx !== null && (
-        <div
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
-          onClick={() => setLightboxIdx(null)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={shownUrls[lightboxIdx]}
-            alt={`Screenshot ${lightboxIdx + 1}`}
-            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          {shownUrls.length > 1 && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => i !== null ? (i - 1 + shownUrls.length) % shownUrls.length : 0); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-xl hover:bg-white/20 transition-colors"
-              >&#8249;</button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => i !== null ? (i + 1) % shownUrls.length : 0); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-xl hover:bg-white/20 transition-colors"
-              >&#8250;</button>
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+        <LightboxOverlay
+          srcs={shownUrls}
+          index={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+          onIndexChange={setLightboxIdx}
+          header={
+            <p className="text-xs text-zinc-600">{lightboxIdx + 1} / {shownUrls.length}</p>
+          }
+          bottomBar={
+            shownUrls.length > 1 ? (
+              <div className="py-3 flex justify-center gap-1.5">
                 {shownUrls.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); setLightboxIdx(i); }}
-                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === lightboxIdx ? "bg-white" : "bg-white/30"}`}
-                  />
+                  <button key={i} onClick={() => setLightboxIdx(i)}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === lightboxIdx ? "bg-white" : "bg-white/30"}`} />
                 ))}
               </div>
-            </>
-          )}
-          <button
-            onClick={() => setLightboxIdx(null)}
-            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-sm"
-          >&#x2715;</button>
-        </div>
+            ) : undefined
+          }
+        />
       )}
     </div>
   );

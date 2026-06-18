@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Game, STATUS_LABELS, STATUS_COLORS, PLATFORM_COLORS, formatPlaytime, GameStatus, Platform, impliesOwnership } from "@/lib/games";
 import Image from "next/image";
@@ -138,7 +138,6 @@ function HomePage() {
   const ratingFilter = Number(searchParams.get("rating") ?? 0);
   const lentFilter = searchParams.get("lent") === "1";
 
-  const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortMode, setSortMode] = useState<"alpha" | "added" | "rating">(() => {
@@ -149,12 +148,8 @@ function HomePage() {
     if (typeof window === "undefined") return "cartridge";
     return (localStorage.getItem("viewMode") as "cartridge" | "screenshot") ?? "cartridge";
   });
-  // Local input value — decoupled from URL so typing never triggers a router re-render
+  // inputValue is the live search text — drives filtering immediately, never reset by router
   const [inputValue, setInputValue] = useState(query);
-
-  // Keep inputValue in sync if the URL query changes externally (e.g. clear button, back/forward)
-  useEffect(() => { setInputValue(query); }, [query]);
-
   function updateParams(updates: Record<string, string>) {
     const p = new URLSearchParams(searchParams.toString());
     for (const [k, v] of Object.entries(updates)) {
@@ -163,9 +158,9 @@ function HomePage() {
     router.replace(`/?${p.toString()}`, { scroll: false });
   }
 
-  // Debounce: write to URL only after the user stops typing
+  // Debounce q to URL — pure side-effect, never reads back to avoid overwriting typed input
   useEffect(() => {
-    const t = setTimeout(() => updateParams({ q: inputValue }), 300);
+    const t = setTimeout(() => updateParams({ q: inputValue }), 400);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputValue]);
@@ -176,27 +171,21 @@ function HomePage() {
   function setLentFilter(v: boolean) { updateParams({ lent: v ? "1" : "" }); }
 
   useEffect(() => {
-    fetch("/api/games").then((r) => r.json()).then(setAllGames);
+    fetch("/api/games")
+      .then((r) => r.json())
+      .then((data) => { setAllGames(data); setLoading(false); });
   }, []);
 
-  const fetchGames = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
-    if (platformFilter) params.set("platform", platformFilter);
-    if (lentFilter) params.set("lent", "1");
-    const res = await fetch(`/api/games?${params}`);
-    const data = await res.json();
-    setGames(data);
-    setLoading(false);
-  }, [query, statusFilter, platformFilter, lentFilter]);
-
-  useEffect(() => {
-    const t = setTimeout(fetchGames, 0);
-    return () => clearTimeout(t);
-  }, [fetchGames]);
-
-  const sorted = [...games].sort((a, b) => {
+  // All filtering done client-side on allGames — no network round-trip on keystroke
+  const q = inputValue.toLowerCase();
+  const sorted = [...allGames].filter((g) => {
+    if (q && !g.title.toLowerCase().includes(q)) return false;
+    if (statusFilter === "backlog") { if (!impliesOwnership(g.status)) return false; }
+    else if (statusFilter && statusFilter !== "all") { if (g.status !== statusFilter) return false; }
+    if (platformFilter && g.platform !== platformFilter) return false;
+    if (lentFilter && !g.lent) return false;
+    return true;
+  }).sort((a, b) => {
     if (sortMode === "alpha") return a.title.localeCompare(b.title);
     if (sortMode === "rating") {
       const ra = a.rating ?? 0;
@@ -213,6 +202,7 @@ function HomePage() {
   const filtered = ratingFilter > 0
     ? sorted.filter((g) => g.rating !== null && g.rating >= ratingFilter)
     : sorted;
+
 
   return (
     <div>
@@ -358,7 +348,7 @@ function HomePage() {
             </div>
           ))}
         </div>
-      ) : games.length === 0 ? (
+      ) : allGames.length === 0 ? (
         <div className="text-center py-20 text-zinc-600">
           <p className="text-4xl mb-3">🎮</p>
           <p className="text-sm">No games found.</p>
