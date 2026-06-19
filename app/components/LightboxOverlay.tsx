@@ -140,20 +140,23 @@ export default function LightboxOverlay({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex flex-col" onClick={onClose}>
-      {/* Top-right: actions + close */}
-      <div className="absolute top-0 right-0 flex items-center z-10 p-1" onClick={e => e.stopPropagation()}>
-        {actions}
-        <button
-          onClick={onClose}
-          className="p-5 sm:p-2 text-zinc-400 hover:text-zinc-100 text-xl leading-none"
-        >✕</button>
-      </div>
-      {/* Centered header info */}
-      {header && (
-        <div className="shrink-0 pt-3 pb-1 px-16 text-center" onClick={e => e.stopPropagation()}>
-          {header}
+      {/* Top bar: header left, actions+close right — in-flow so they never overlap */}
+      <div className="shrink-0 flex items-center gap-1 pl-3 pr-1 pt-1 pb-1" onClick={e => e.stopPropagation()}>
+        {header ? (
+          <div className="flex-1 min-w-0 text-left sm:text-center sm:px-4 py-1">
+            {header}
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+        <div className="flex items-center shrink-0">
+          {actions}
+          <button
+            onClick={onClose}
+            className="px-3 py-4 sm:p-2 text-zinc-400 hover:text-zinc-100 text-xl leading-none"
+          >✕</button>
         </div>
-      )}
+      </div>
 
       {/* Image area */}
       <div

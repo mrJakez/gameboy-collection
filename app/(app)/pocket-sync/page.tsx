@@ -102,21 +102,27 @@ export default function PocketSyncPage() {
     setOutput("");
     setError("");
     setChanges([]);
-    const fd = new FormData();
-    fd.append("list", listFile);
-    fd.append("playtimes", playtimesFile);
-    const res = await fetch("/api/pocket-sync", { method: "POST", body: fd });
-    const data = await res.json();
-    if (res.ok) {
-      setStatus("done");
-      setOutput(data.output ?? "");
-      setChanges(data.changes ?? []);
-      setLastSync(new Date().toISOString());
-      setOverdue(false);
-    } else {
+    try {
+      const fd = new FormData();
+      fd.append("list", listFile);
+      fd.append("playtimes", playtimesFile);
+      const res = await fetch("/api/pocket-sync", { method: "POST", body: fd });
+      let data: Record<string, unknown> = {};
+      try { data = await res.json(); } catch { /* empty body */ }
+      if (res.ok) {
+        setStatus("done");
+        setOutput((data.output as string) ?? "");
+        setChanges((data.changes as typeof changes) ?? []);
+        setLastSync(new Date().toISOString());
+        setOverdue(false);
+      } else {
+        setStatus("error");
+        setError((data.error as string) ?? `Server error ${res.status}`);
+        setOutput((data.output as string) ?? "");
+      }
+    } catch (err) {
       setStatus("error");
-      setError(data.error ?? "Unknown error");
-      setOutput(data.output ?? "");
+      setError(err instanceof Error ? err.message : "Request failed");
     }
   }
 
@@ -278,6 +284,74 @@ export default function PocketSyncPage() {
             {status === "uploading" ? "Importing…" : "Import game data"}
           </button>
         </form>
+
+        {/* Result — directly below the form */}
+        {status === "done" && (
+          <div className="space-y-3 mt-4">
+            <div className="bg-green-950/30 border border-green-800 rounded-xl p-4">
+              <p className="text-green-400 text-sm font-medium">Import complete</p>
+              {changes.length === 0 && (
+                <p className="text-xs text-zinc-500 mt-1">No changes detected.</p>
+              )}
+            </div>
+
+            {changes.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-zinc-800">
+                  <p className="text-xs font-medium text-zinc-400">
+                    {changes.length} change{changes.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div className="divide-y divide-zinc-800">
+                  {changes.map((c, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="flex-1 text-sm text-zinc-200 truncate">{c.title}</span>
+                      {c.type === "added" && (
+                        <span className="text-xs text-green-400 font-medium shrink-0">New</span>
+                      )}
+                      {c.type === "playtime" && (
+                        <span className="text-xs text-zinc-400 shrink-0 tabular-nums">
+                          {c.before} min → <span className="text-zinc-200">{c.after} min</span>
+                        </span>
+                      )}
+                      {c.type === "status" && (
+                        <span className="text-xs text-zinc-400 shrink-0">
+                          {c.before} → <span className="text-zinc-200">{c.after}</span>
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {output && (
+              <details className="text-xs text-zinc-600">
+                <summary className="cursor-pointer hover:text-zinc-400 transition-colors">Script output</summary>
+                <pre className="mt-2 text-zinc-500 whitespace-pre-wrap font-mono overflow-x-auto bg-zinc-900 rounded-lg p-3">{output}</pre>
+              </details>
+            )}
+
+            <button
+              onClick={() => { setStatus("idle"); setListFile(null); setPlaytimesFile(null); setChanges([]); setOutput(""); router.push("/"); }}
+              className="w-full py-2.5 bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-100 rounded-lg transition-colors"
+            >
+              Back to collection
+            </button>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="bg-red-950/30 border border-red-800 rounded-xl p-4 mt-4">
+            <p className="text-red-400 text-sm font-medium mb-1">Import failed</p>
+            <p className="text-xs text-zinc-400 mb-3">{error}</p>
+            {output && (
+              <pre className="text-xs text-zinc-500 whitespace-pre-wrap font-mono overflow-x-auto">
+                {output}
+              </pre>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Section 2: Screenshots ── */}
@@ -391,66 +465,6 @@ export default function PocketSyncPage() {
         </div>
       )}
 
-      {/* Result */}
-      {status === "done" && (
-        <div className="space-y-4">
-          <div className="bg-green-950/30 border border-green-800 rounded-xl p-4">
-            <p className="text-green-400 text-sm font-medium">Import complete</p>
-            {changes.length === 0 && (
-              <p className="text-xs text-zinc-500 mt-1">No changes detected.</p>
-            )}
-          </div>
-
-          {changes.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-zinc-800">
-                <p className="text-xs font-medium text-zinc-400">
-                  {changes.length} change{changes.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-              <div className="divide-y divide-zinc-800">
-                {changes.map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="flex-1 text-sm text-zinc-200 truncate">{c.title}</span>
-                    {c.type === "added" && (
-                      <span className="text-xs text-green-400 font-medium shrink-0">New</span>
-                    )}
-                    {c.type === "playtime" && (
-                      <span className="text-xs text-zinc-400 shrink-0 tabular-nums">
-                        {c.before} min → <span className="text-zinc-200">{c.after} min</span>
-                      </span>
-                    )}
-                    {c.type === "status" && (
-                      <span className="text-xs text-zinc-400 shrink-0">
-                        {c.before} → <span className="text-zinc-200">{c.after}</span>
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={() => router.push("/")}
-            className="w-full py-2.5 bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-100 rounded-lg transition-colors"
-          >
-            Back to collection
-          </button>
-        </div>
-      )}
-
-      {status === "error" && (
-        <div className="bg-red-950/30 border border-red-800 rounded-xl p-4">
-          <p className="text-red-400 text-sm font-medium mb-1">Import failed</p>
-          <p className="text-xs text-zinc-400 mb-3">{error}</p>
-          {output && (
-            <pre className="text-xs text-zinc-500 whitespace-pre-wrap font-mono overflow-x-auto">
-              {output}
-            </pre>
-          )}
-        </div>
-      )}
     </div>
   );
 }

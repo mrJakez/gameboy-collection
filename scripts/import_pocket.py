@@ -434,6 +434,10 @@ def main():
                 existing["libraryImage"] = lib_image_url; changed = True
             if not existing.get("romCrc"):
                 existing["romCrc"] = crc; changed = True
+            # If wishlist game now has playtime on the Pocket → promote to playing
+            if playtime_mins > 0 and existing.get("status") == "wishlist":
+                existing["status"] = "playing"; changed = True
+                print(f"   🎮 Status wishlist→playing: {pg['title']}")
             if changed:
                 updated += 1
         else:

@@ -76,6 +76,7 @@ export default function ScreenshotsPage() {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [sortAsc, setSortAsc] = useState(false); // false = newest first
   const [authenticated, setAuthenticated] = useState(false);
   const [screenshotsLoading, setScreenshotsLoading] = useState(true);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -236,18 +237,22 @@ export default function ScreenshotsPage() {
     };
   }, [selectMode]);
 
-  const filtered = screenshots.filter(s => {
-    if (filter === "assigned") return s.gameId !== null;
-    if (filter === "unassigned") return s.gameId === null;
-    if (filter === "highlights") return s.highlight;
-    return true;
-  });
+  const filtered = screenshots
+    .filter(s => {
+      if (filter === "assigned") return s.gameId !== null;
+      if (filter === "unassigned") return s.gameId === null;
+      if (filter === "highlights") return s.highlight;
+      return true;
+    })
+    .sort((a, b) => {
+      const cmp = a.filename.localeCompare(b.filename);
+      return sortAsc ? cmp : -cmp;
+    });
 
   function enterSelectMode() {
     setSelectMode(true);
     setSelected(new Set());
     setWizardGameSearch("");
-    setFilter("unassigned");
   }
 
   function exitSelectMode() {
@@ -297,6 +302,58 @@ export default function ScreenshotsPage() {
       )
     );
     setScreenshots(prev => prev.filter(s => !selected.has(s.filename)));
+    setSelected(new Set());
+    setWizardAssigning(false);
+  }
+
+  async function favoriteSelected() {
+    setWizardAssigning(true);
+    const selectedScreenshots = screenshots.filter(s => selected.has(s.filename));
+    const allHighlighted = selectedScreenshots.every(s => s.highlight);
+    const newHighlight = !allHighlighted;
+    await Promise.all(
+      selectedScreenshots.map(s =>
+        fetch(`/api/screenshots/${encodeURIComponent(s.filename)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ highlight: newHighlight }),
+        })
+      )
+    );
+    setScreenshots(prev => prev.map(s => selected.has(s.filename) ? { ...s, highlight: newHighlight } : s));
+    setSelected(new Set());
+    setWizardAssigning(false);
+  }
+
+  async function unassignSelected() {
+    setWizardAssigning(true);
+    await Promise.all(
+      [...selected].map(filename =>
+        fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId: null }),
+        })
+      )
+    );
+    setScreenshots(prev => prev.map(s => selected.has(s.filename) ? { ...s, gameId: null } : s));
+    setSelected(new Set());
+    setWizardAssigning(false);
+  }
+
+  async function restoreSelected() {
+    setWizardAssigning(true);
+    await Promise.all(
+      [...selected].map(filename =>
+        fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deleted: false }),
+        })
+      )
+    );
+    setScreenshots(prev => prev.filter(s => !selected.has(s.filename)));
+    setDeletedCount(c => Math.max(0, c - selected.size));
     setSelected(new Set());
     setWizardAssigning(false);
   }
@@ -392,7 +449,7 @@ export default function ScreenshotsPage() {
               onClick={enterSelectMode}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 bg-amber-950/40 border border-amber-800/60 rounded-lg hover:bg-amber-900/50 transition-colors"
             >
-              Assign wizard
+              Bulk edit
             </button>
           </div>
         )}
@@ -403,7 +460,7 @@ export default function ScreenshotsPage() {
         <div className="sticky top-3 z-30 mb-4 bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap shadow-xl">
           <p className="text-sm text-zinc-300 shrink-0">
             {selected.size === 0
-              ? <span className="text-zinc-500">Click or drag to select screenshots</span>
+              ? <span className="text-zinc-500">Tap screenshots or draw a selection box</span>
               : <><span className="font-semibold text-zinc-100">{selected.size}</span> <span className="text-zinc-400">selected</span></>}
           </p>
           {selected.size > 0 && (
@@ -414,13 +471,41 @@ export default function ScreenshotsPage() {
               >
                 Clear
               </button>
-              <button
-                onClick={deleteSelected}
-                disabled={wizardAssigning}
-                className="text-xs text-red-500 hover:text-red-400 border border-red-900/60 hover:border-red-700 rounded-lg px-2.5 py-1 transition-colors shrink-0 disabled:opacity-40"
-              >
-                Delete
-              </button>
+              {showDeleted ? (
+                <button
+                  onClick={restoreSelected}
+                  disabled={wizardAssigning}
+                  className="text-xs text-zinc-300 hover:text-zinc-100 border border-zinc-700 hover:border-zinc-500 rounded-lg px-2.5 py-1 transition-colors shrink-0 disabled:opacity-40"
+                >
+                  Restore
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={favoriteSelected}
+                    disabled={wizardAssigning}
+                    className="text-xs text-amber-500 hover:text-amber-300 border border-amber-900/60 hover:border-amber-700 rounded-lg px-2.5 py-1 transition-colors shrink-0 disabled:opacity-40"
+                  >
+                    {screenshots.filter(s => selected.has(s.filename)).every(s => s.highlight) ? "★ Unstar" : "★ Favorite"}
+                  </button>
+                  {screenshots.some(s => selected.has(s.filename) && s.gameId) && (
+                    <button
+                      onClick={unassignSelected}
+                      disabled={wizardAssigning}
+                      className="text-xs text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 rounded-lg px-2.5 py-1 transition-colors shrink-0 disabled:opacity-40"
+                    >
+                      Unassign
+                    </button>
+                  )}
+                  <button
+                    onClick={deleteSelected}
+                    disabled={wizardAssigning}
+                    className="text-xs text-red-500 hover:text-red-400 border border-red-900/60 hover:border-red-700 rounded-lg px-2.5 py-1 transition-colors shrink-0 disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
               <div className="relative flex-1 min-w-[200px]">
                 <input
                   type="text"
@@ -460,39 +545,36 @@ export default function ScreenshotsPage() {
             onClick={exitSelectMode}
             className="ml-auto text-xs text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
           >
-            Exit wizard
+            Done
           </button>
         </div>
       )}
 
       {/* Filter tabs — only when screenshots exist */}
       {!isEmpty && (
-        <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-4">
           {([
             { key: "all", label: "All" },
             { key: "unassigned", label: "Unassigned" },
             { key: "assigned", label: "Assigned" },
-            { key: "highlights", label: "★ Favorites" },
+            { key: "highlights", label: "★" },
           ] as { key: Filter; label: string }[]).map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 filter === f.key
                   ? f.key === "highlights" ? "bg-amber-400 text-zinc-900" : "bg-zinc-100 text-zinc-900"
-                  : f.key === "highlights" ? "text-amber-500 hover:text-amber-300" : "text-zinc-400 hover:text-zinc-200"
+                  : f.key === "highlights" ? "text-amber-500 hover:text-amber-300" : "text-zinc-500 hover:text-zinc-200"
               }`}>
               {f.label}
             </button>
           ))}
-        </div>
-        {authenticated && (deletedCount > 0 || showDeleted) && (
+          <span className="text-zinc-700">·</span>
           <button
-            onClick={toggleShowDeleted}
-            className={`text-xs transition-colors ${showDeleted ? "text-red-400 hover:text-zinc-400" : "text-zinc-600 hover:text-zinc-400"}`}
+            onClick={() => setSortAsc(v => !v)}
+            className="text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors"
           >
-            {showDeleted ? "← Back" : `${deletedCount} deleted`}
+            {sortAsc ? "↑ Oldest" : "↓ Newest"}
           </button>
-        )}
         </div>
       )}
 
@@ -669,7 +751,7 @@ export default function ScreenshotsPage() {
                 <a
                   href={`/api/screenshots/${encodeURIComponent(lightbox.filename)}`}
                   download={lightbox.filename}
-                  className="p-5 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors"
+                  className="px-3 py-4 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors"
                   title="Download"
                   onClick={e => e.stopPropagation()}
                 >
@@ -687,13 +769,13 @@ export default function ScreenshotsPage() {
                     <>
                       <button
                         onClick={() => toggleHighlight(lightbox.filename, !lightbox.highlight)}
-                        className={`p-5 sm:p-2 transition-colors ${lightbox.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
+                        className={`px-3 py-4 sm:p-2 transition-colors ${lightbox.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
                         title={lightbox.highlight ? "Remove highlight" : "Mark as highlight"}
                       >
                         <StarIcon filled={lightbox.highlight} />
                       </button>
                       <button onClick={() => deleteScreenshot(lightbox.filename)}
-                        className="p-5 sm:p-2 text-zinc-600 hover:text-red-400 transition-colors">
+                        className="px-3 py-4 sm:p-2 text-zinc-600 hover:text-red-400 transition-colors">
                         <TrashIcon />
                       </button>
                     </>
@@ -724,6 +806,18 @@ export default function ScreenshotsPage() {
           />
         );
       })()}
+
+      {/* Deleted section — bottom of page */}
+      {authenticated && (deletedCount > 0 || showDeleted) && (
+        <div className="mt-12 border-t border-zinc-800 pt-6">
+          <button
+            onClick={toggleShowDeleted}
+            className={`text-xs transition-colors ${showDeleted ? "text-red-400 hover:text-zinc-400" : "text-zinc-600 hover:text-zinc-400"}`}
+          >
+            {showDeleted ? "← Hide deleted" : `${deletedCount} deleted screenshot${deletedCount !== 1 ? "s" : ""}`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

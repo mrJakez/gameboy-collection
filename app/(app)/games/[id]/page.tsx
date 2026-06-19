@@ -736,7 +736,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                   <a
                     href={`/api/screenshots/${encodeURIComponent(s.filename)}`}
                     download={s.filename}
-                    className="p-5 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors"
+                    className="px-3 py-4 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors"
                     title="Download"
                     onClick={e => e.stopPropagation()}
                   >
@@ -747,14 +747,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                   <>
                     <button
                       onClick={() => toggleHighlight(s.filename, !s.highlight)}
-                      className={`p-5 sm:p-2 transition-colors ${s.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
+                      className={`px-3 py-4 sm:p-2 transition-colors ${s.highlight ? "text-amber-400 hover:text-amber-300" : "text-zinc-600 hover:text-amber-400"}`}
                       title={s.highlight ? "Remove from favorites" : "Mark as favorite"}
                     >
                       <StarIcon filled={s.highlight} />
                     </button>
                     <button
                       onClick={() => deleteScreenshot(s.filename)}
-                      className="p-5 sm:p-2 text-zinc-600 hover:text-red-400 transition-colors"
+                      className="px-3 py-4 sm:p-2 text-zinc-600 hover:text-red-400 transition-colors"
                       title="Delete screenshot"
                     >
                       <TrashIcon />
@@ -775,7 +775,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
       {/* Cartridge lightbox — full shell rendering */}
       {cartridgeLightbox && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={() => setCartridgeLightbox(false)}>
-          <button onClick={() => setCartridgeLightbox(false)} className="absolute top-3 right-3 p-5 sm:p-2 text-zinc-400 hover:text-zinc-100 text-xl leading-none">✕</button>
+          <button onClick={() => setCartridgeLightbox(false)} className="absolute top-3 right-3 px-3 py-4 sm:p-2 text-zinc-400 hover:text-zinc-100 text-xl leading-none">✕</button>
           <div className="w-[min(80vw,80vh)] h-[min(80vw,80vh)]" onClick={e => e.stopPropagation()}>
             <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
           </div>
@@ -862,6 +862,16 @@ function ScreenshotGallery({ urls }: { urls: string[] }) {
           onIndexChange={setLightboxIdx}
           header={
             <p className="text-xs text-zinc-600">{lightboxIdx + 1} / {shownUrls.length}</p>
+          }
+          actions={
+            <a
+              href={shownUrls[lightboxIdx]}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-4 sm:p-2 text-zinc-600 hover:text-zinc-100 transition-colors flex items-center"
+            >
+              <DownloadIcon />
+            </a>
           }
           bottomBar={
             shownUrls.length > 1 ? (
