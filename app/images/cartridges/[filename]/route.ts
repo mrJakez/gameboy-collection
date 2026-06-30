@@ -27,11 +27,25 @@ export async function GET(
 
   const thumb = req.nextUrl.searchParams.get("thumb") === "1";
 
-  if (!thumb) {
-    const buf = fs.readFileSync(original);
+  const serveFile = (filePath: string): NextResponse => {
+    const buf = fs.readFileSync(filePath);
+    const mtime = fs.statSync(filePath).mtimeMs;
+    const etag = `"${mtime.toString(36)}"`;
+    const ifNoneMatch = req.headers.get("if-none-match");
+    if (ifNoneMatch === etag) {
+      return new NextResponse(null, { status: 304 });
+    }
     return new NextResponse(buf, {
-      headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400" },
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "no-cache",
+        "ETag": etag,
+      },
     });
+  };
+
+  if (!thumb) {
+    return serveFile(original);
   }
 
   // Serve cached thumbnail, generate on demand
@@ -45,8 +59,5 @@ export async function GET(
       .toFile(cachePath);
   }
 
-  const buf = fs.readFileSync(cachePath);
-  return new NextResponse(buf, {
-    headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400" },
-  });
+  return serveFile(cachePath);
 }
