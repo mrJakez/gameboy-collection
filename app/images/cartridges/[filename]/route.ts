@@ -29,10 +29,18 @@ export async function GET(
 
   const serveFile = (filePath: string): NextResponse => {
     const buf = fs.readFileSync(filePath);
+    const mtime = fs.statSync(filePath).mtimeMs;
+    const etag = `"${mtime.toString(36)}"`;
+    const ifNoneMatch = req.headers.get("if-none-match");
+    if (ifNoneMatch === etag) {
+      return new NextResponse(null, { status: 304 });
+    }
     return new NextResponse(buf, {
       headers: {
         "Content-Type": "image/jpeg",
         "Cache-Control": "no-store",
+        "X-Accel-Expires": "0",  // tell nginx not to cache this response
+        "ETag": etag,
       },
     });
   };
