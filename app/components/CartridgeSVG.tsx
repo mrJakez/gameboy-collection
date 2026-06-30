@@ -2,6 +2,7 @@ interface CartridgeSVGProps {
   platform: "GB" | "GBC" | "GBA" | "GBP";
   labelSrc: string | null;
   className?: string;
+  thumb?: boolean; // serve downsampled thumbnail instead of full image
 }
 
 // GB/GBC: portrait shell 940×1064, label well measured from gb-cartridge-shell.png
@@ -72,16 +73,25 @@ function GBACartridge({ labelSrc }: { labelSrc: string | null }) {
   );
 }
 
-export default function CartridgeSVG({ platform, labelSrc, className = "w-full h-full" }: CartridgeSVGProps) {
+function toThumbUrl(src: string | null, thumb: boolean): string | null {
+  if (!src || !thumb) return src;
+  // Only thumbnail our own cartridge images (/images/cartridges/...)
+  const match = src.match(/^\/images\/cartridges\/(.+)$/);
+  if (!match) return src;
+  return `/images/cartridges/${match[1]}?thumb=1`;
+}
+
+export default function CartridgeSVG({ platform, labelSrc, className = "w-full h-full", thumb = false }: CartridgeSVGProps) {
   const shell =
     platform === "GBC" ? "/images/gbc-cartridge-shell.png" : "/images/gb-cartridge-shell.png";
+  const src = toThumbUrl(labelSrc, thumb);
 
   return (
     <div className={className}>
       {platform === "GBA" ? (
-        <GBACartridge labelSrc={labelSrc} />
+        <GBACartridge labelSrc={src} />
       ) : (
-        <GBCartridge labelSrc={labelSrc} shell={shell} />
+        <GBCartridge labelSrc={src} shell={shell} />
       )}
     </div>
   );

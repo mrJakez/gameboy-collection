@@ -457,7 +457,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                     className="flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded-xl aspect-square cursor-zoom-in"
                     onClick={() => setCartridgeLightbox(true)}
                   >
-                    <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" />
+                    <CartridgeSVG platform={game.platform} labelSrc={game.cartridgeImage} className="w-full h-full" thumb />
                   </div>
                 ) : (
                   /* No cartridge image — placeholder with + button when authenticated */
@@ -563,7 +563,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                             className="group rounded-xl border border-zinc-700 hover:border-zinc-400 bg-zinc-800 p-2 transition-colors disabled:opacity-50"
                           >
                             <div className="aspect-square">
-                              <CartridgeSVG platform={game.platform} labelSrc={v.path} className="w-full h-full" />
+                              <CartridgeSVG platform={game.platform} labelSrc={v.path} className="w-full h-full" thumb />
                             </div>
                             <span className="block mt-1.5 text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">{v.label}</span>
                           </button>
