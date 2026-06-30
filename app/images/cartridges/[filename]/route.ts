@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
+export const dynamic = "force-dynamic";
+
 const CARTRIDGES_DIR = path.join(process.cwd(), "data", "cartridges");
 const CACHE_DIR = path.join(process.cwd(), "data", "cache", "cartridges");
 const THUMB_WIDTH = 400;
