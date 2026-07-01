@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readGames, createGame } from "@/lib/db";
 import type { Game, GameStatus } from "@/lib/games";
 import { impliesOwnership } from "@/lib/games";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -29,5 +30,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const game = createGame(body as Omit<Game, "id">);
+  logger.action("game.create", { gameId: game.id, title: game.title, platform: game.platform, status: game.status });
   return NextResponse.json(game, { status: 201 });
 }

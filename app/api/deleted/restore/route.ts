@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/app/api/auth/route";
 import { readDeleted, writeDeleted, createGame } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   if (!isAuthenticated(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,5 +35,6 @@ export async function POST(req: NextRequest) {
     createdAt: new Date().toISOString(),
   });
 
+  logger.action("game.restore", { gameId: game.id, title: entry.title });
   return NextResponse.json({ ok: true, gameId: game.id });
 }

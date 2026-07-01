@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { isAuthenticated } from "@/app/api/auth/route";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   if (!isAuthenticated(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
 
   const bytes = await file.arrayBuffer();
   fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(bytes));
+  logger.action("cartridge.upload", { gameId, filename, sizeBytes: bytes.byteLength });
 
   return NextResponse.json({ path: `/images/cartridges/${filename}` });
 }

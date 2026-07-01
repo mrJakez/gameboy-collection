@@ -53,7 +53,12 @@ export async function GET(
   fs.mkdirSync(CACHE_DIR, { recursive: true });
   const cachePath = path.join(CACHE_DIR, filename);
 
-  if (!fs.existsSync(cachePath)) {
+  const forceRegen = req.nextUrl.searchParams.get("regenerate") === "1";
+  const originalStat = fs.statSync(original);
+  const cacheStat = fs.existsSync(cachePath) ? fs.statSync(cachePath) : null;
+  const stale = forceRegen || !cacheStat || cacheStat.mtimeMs < originalStat.mtimeMs || cacheStat.size < 1024;
+
+  if (stale) {
     await sharp(original)
       .resize(THUMB_WIDTH, undefined, { withoutEnlargement: true })
       .jpeg({ quality: 82 })

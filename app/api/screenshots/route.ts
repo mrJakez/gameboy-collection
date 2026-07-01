@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/app/api/auth/route";
+import { logger } from "@/lib/logger";
 import fs from "fs";
 import path from "path";
 
@@ -61,5 +62,6 @@ export async function POST(req: NextRequest) {
     saved.push(file.name);
   }
 
+  logger.action("screenshot.import", { count: saved.length, files: saved });
   return NextResponse.json({ saved });
 }

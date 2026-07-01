@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/app/api/auth/route";
+import { logger } from "@/lib/logger";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -72,10 +73,12 @@ export async function POST(req: NextRequest) {
       path.join(process.cwd(), "data", "last-sync.json"),
       JSON.stringify({ syncedAt: new Date().toISOString(), snapshot })
     );
+    logger.action("pocket.sync", { changes: changes.length, added: changes.filter(c => c.type === "added").length });
     return NextResponse.json({ ok: true, output, changes });
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string; message?: string };
     const output = (e.stdout ?? "") + "\n" + (e.stderr ?? "");
+    logger.error({ type: "action", action: "pocket.sync", message: e.message ?? "Script failed" });
     return NextResponse.json({ error: e.message ?? "Script failed", output }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/app/api/auth/route";
 import { readMeta, writeMeta } from "@/app/api/screenshots/route";
+import { logger } from "@/lib/logger";
 import fs from "fs";
 import path from "path";
 
@@ -38,6 +39,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ fi
   meta[filename] = entry;
   writeMeta(meta);
 
+  const actionName = "deleted" in body ? (body.deleted ? "screenshot.softDelete" : "screenshot.restore")
+    : "highlight" in body ? (body.highlight ? "screenshot.favorite" : "screenshot.unfavorite")
+    : "screenshot.assign";
+  logger.action(actionName, { filename, ...body });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -50,5 +56,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ f
   const meta = readMeta();
   delete meta[filename];
   writeMeta(meta);
+  logger.action("screenshot.hardDelete", { filename });
   return NextResponse.json({ ok: true });
 }

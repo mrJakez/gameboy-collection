@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGame, updateGame, deleteGame } from "@/lib/db";
 import { isAuthenticated } from "@/app/api/auth/route";
+import { logger } from "@/lib/logger";
 import fs from "fs";
 import path from "path";
 
@@ -34,6 +35,7 @@ export async function PATCH(
 
   const game = updateGame(id, body);
   if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  logger.action("game.update", { gameId: id, title: game.title, fields: Object.keys(body) });
   return NextResponse.json(game);
 }
 
@@ -43,7 +45,9 @@ export async function DELETE(
 ) {
   if (!isAuthenticated(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
+  const existing = getGame(id);
   const ok = deleteGame(id);
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  logger.action("game.delete", { gameId: id, title: existing?.title });
   return NextResponse.json({ success: true });
 }
