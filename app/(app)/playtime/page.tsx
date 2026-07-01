@@ -19,7 +19,8 @@ function BarChart({ value, max }: { value: number; max: number }) {
 }
 
 function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: number; rank: number }) {
-  const coverSrc = game.cartridgeImage ?? game.libraryImage;
+  const rawSrc = game.cartridgeImage ?? game.libraryImage;
+  const coverSrc = rawSrc?.includes("/images/cartridges/") ? `${rawSrc}?thumb=1` : rawSrc;
   const platformColor = PLATFORM_COLORS[game.platform];
   const statusColor = STATUS_COLORS[game.status];
 
