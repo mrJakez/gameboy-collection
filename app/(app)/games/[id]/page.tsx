@@ -153,7 +153,18 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [detectedBox, setDetectedBox] = useState<Box | null>(null);
   const [manualMode, setManualMode] = useState(false);
   const [form, setForm] = useState<Partial<Game>>({});
+  const [hltb, setHltb] = useState<{ hltbId: number | null; hltbMain: number | null; hltbComplete: number | null } | null>(null);
+  const [hltbLoading, setHltbLoading] = useState(true);
 
+  // Auto-fetch HLTB data on mount — independent of AI info
+  useEffect(() => {
+    setHltbLoading(true);
+    fetch(`/api/games/${id}/hltb`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setHltb(data); })
+      .catch(() => {})
+      .finally(() => setHltbLoading(false));
+  }, [id]);
 
   async function toggleHighlight(filename: string, highlight: boolean) {
     await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
@@ -693,6 +704,68 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             );
           })()}
 
+          {/* Playtime Progress — auto-loaded from HLTB cache */}
+          {(game.playtime ?? 0) > 0 && (hltbLoading || hltb?.hltbMain != null) && (
+            <div className="mb-8">
+              <h2 className="text-sm font-semibold text-zinc-300 mb-2">Playtime Progress</h2>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 space-y-2">
+                {hltbLoading ? (
+                  <>
+                    <div className="flex justify-between">
+                      <div className="h-3 w-24 bg-zinc-800 rounded animate-pulse" />
+                      <div className="h-3 w-20 bg-zinc-800 rounded animate-pulse" />
+                    </div>
+                    <div className="h-2 bg-zinc-800 rounded-full animate-pulse" />
+                    <div className="h-2.5 w-32 bg-zinc-800 rounded animate-pulse" />
+                  </>
+                ) : (() => {
+                  const avgMins = hltb!.hltbMain! * 60;
+                  const actualMins = game.playtime ?? 0;
+                  const completed = game.status === "completed";
+                  const playing = game.status === "playing";
+                  const pct = Math.min(actualMins / avgMins, 1);
+                  const playedH = (actualMins / 60).toFixed(1);
+                  const diffMins = Math.abs(avgMins - actualMins);
+                  const diffH = (diffMins / 60).toFixed(1);
+                  const faster = actualMins < avgMins;
+                  const barColor = completed ? "bg-blue-500" : playing ? "bg-green-500" : "bg-zinc-500";
+                  const labelColor = completed ? "text-blue-400" : playing ? "text-green-400" : "text-zinc-300";
+                  return (
+                    <>
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className={`${labelColor} font-medium`}>
+                          {completed ? "🎉 Completed" : `${playedH}h played`}
+                        </span>
+                        <span className="text-zinc-500">
+                          {completed
+                            ? faster ? `${diffH}h faster than avg` : `${diffH}h longer than avg`
+                            : `~${diffH}h left`}
+                        </span>
+                      </div>
+                      <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                          style={{ width: `${Math.round(pct * 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-baseline text-[10px] text-zinc-600">
+                        <span>⏱ Avg ~{hltb!.hltbMain}h main{hltb!.hltbComplete != null ? ` · ~${hltb!.hltbComplete}h 100%` : ""}</span>
+                        <a
+                          href={hltb!.hltbId ? `https://howlongtobeat.com/game/${hltb!.hltbId}` : `https://howlongtobeat.com/?q=${encodeURIComponent(game.title)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-zinc-600 hover:text-zinc-400 transition-colors"
+                        >
+                          HowLongToBeat ↗
+                        </a>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* AI Info */}
           <AiSection
             gameId={game.id}
@@ -804,6 +877,8 @@ interface AiInfo {
   releaseYear: number | null;
   metacriticScore: number | null;
   userScore: number | null;
+  averagePlaytimeMain: number | null;
+  averagePlaytimeComplete: number | null;
   youtubeQuery: string;
   mobySlug: string;
   screenshots: string[];
@@ -986,6 +1061,14 @@ function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authentic
             {info.developer && <span><span className="text-zinc-600">Dev</span> {info.developer}</span>}
             {info.publisher && <span><span className="text-zinc-600">Pub</span> {info.publisher}</span>}
             {info.genre && <span><span className="text-zinc-600">Genre</span> {info.genre}</span>}
+            {(info.averagePlaytimeMain != null || info.averagePlaytimeComplete != null) && (
+              <span>
+                <span className="text-zinc-600">⏱ Avg</span>{" "}
+                {info.averagePlaytimeMain != null && `${info.averagePlaytimeMain}h`}
+                {info.averagePlaytimeMain != null && info.averagePlaytimeComplete != null && " · "}
+                {info.averagePlaytimeComplete != null && <span className="text-zinc-600">{info.averagePlaytimeComplete}h 100%</span>}
+              </span>
+            )}
             {info.releaseYear && (
               <span className="flex items-center gap-1.5">
                 <span className="text-zinc-600">Year</span> {info.releaseYear}

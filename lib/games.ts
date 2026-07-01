@@ -23,6 +23,8 @@ export interface Game {
   pocketData: PocketData | null;
   purchasePrice: string | null;
   createdAt: string | null;
+  averagePlaytimeMain: number | null;
+  averagePlaytimeComplete: number | null;
 }
 
 export function formatPlaytime(minutes: number): string {

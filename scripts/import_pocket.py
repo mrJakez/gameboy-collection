@@ -453,6 +453,7 @@ def main():
                 "coverImage": None, "playtime": playtime_mins,
                 "notes": "", "rating": None, "romCrc": crc,
                 "pocketData": None, "purchasePrice": None,
+                "createdAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
             })
             added += 1
             print(f"   ➕ {pg['title']} ({playtime_mins // 60}h{playtime_mins % 60:02d}m)")
