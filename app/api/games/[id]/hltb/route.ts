@@ -8,6 +8,14 @@ export interface HLTBData {
   hltbComplete: number | null;
 }
 
+export interface HLTBCandidate {
+  hltbId: number;
+  title: string;
+  hltbMain: number | null;
+  hltbComplete: number | null;
+  imageUrl?: string;
+}
+
 const HLTB_PLATFORM: Record<string, string> = {
   GB: "Game Boy", GBC: "Game Boy Color", GBA: "Game Boy Advance", GBP: "Game Boy",
 };
@@ -29,8 +37,7 @@ async function getHLTBHash(): Promise<string | null> {
   return null;
 }
 
-async function fetchFromHLTB(title: string, platform: string): Promise<HLTBData> {
-  const empty: HLTBData = { hltbId: null, hltbMain: null, hltbComplete: null };
+async function searchHLTB(title: string, platform: string): Promise<HLTBCandidate[]> {
   try {
     const hash = await getHLTBHash();
     const url = hash
@@ -41,7 +48,7 @@ async function fetchFromHLTB(title: string, platform: string): Promise<HLTBData>
       searchType: "games",
       searchTerms: title.split(/\s+/),
       searchPage: 1,
-      size: 20,
+      size: 10,
       searchOptions: {
         games: {
           userId: 0, platform: HLTB_PLATFORM[platform] ?? "Game Boy",
@@ -65,52 +72,22 @@ async function fetchFromHLTB(title: string, platform: string): Promise<HLTBData>
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return empty;
+    if (!res.ok) return [];
 
     const data = await res.json();
-    const results: { game_id: number; game_name: string; comp_main: number; comp_100: number }[] = data.data ?? [];
-    if (!results.length) return empty;
+    const results: { game_id: number; game_name: string; comp_main: number; comp_100: number; game_image?: string }[] = data.data ?? [];
 
-    const titleLower = title.toLowerCase();
-    const hit = results.find(r => r.game_name.toLowerCase() === titleLower) ?? results[0];
-    return {
-      hltbId: hit.game_id,
-      hltbMain: hit.comp_main ? Math.round(hit.comp_main / 360) / 10 : null,
-      hltbComplete: hit.comp_100 ? Math.round(hit.comp_100 / 360) / 10 : null,
-    };
-  } catch { return empty; }
+    return results.map(r => ({
+      hltbId: r.game_id,
+      title: r.game_name,
+      hltbMain: r.comp_main ? Math.round(r.comp_main / 360) / 10 : null,
+      hltbComplete: r.comp_100 ? Math.round(r.comp_100 / 360) / 10 : null,
+      imageUrl: r.game_image ? `https://howlongtobeat.com/games/${r.game_image}` : undefined,
+    }));
+  } catch { return []; }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const game = getGame(id);
-  if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  // Return from game record if already stored
-  if (game.averagePlaytimeMain != null) {
-    return NextResponse.json({
-      hltbId: null,
-      hltbMain: game.averagePlaytimeMain,
-      hltbComplete: game.averagePlaytimeComplete ?? null,
-    });
-  }
-
-  // Try fetching from HLTB
-  const result = await fetchFromHLTB(game.title, game.platform);
-
-  // Persist to game record if we got data
-  if (result.hltbMain != null) {
-    updateGame(id, {
-      averagePlaytimeMain: result.hltbMain,
-      averagePlaytimeComplete: result.hltbComplete,
-    });
-    return NextResponse.json(result);
-  }
-
-  // Fallback: ask OpenAI just for playtime estimates
+async function fallbackOpenAI(title: string, platform: string): Promise<HLTBData> {
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const response = await client.chat.completions.create({
@@ -125,21 +102,91 @@ Fields:
 - averagePlaytimeComplete: number or null (average hours for 100% completion)
 Be accurate. Return null if you don't know.`,
         },
-        {
-          role: "user",
-          content: `Game: "${game.title}" (${game.platform})`,
-        },
+        { role: "user", content: `Game: "${title}" (${platform})` },
       ],
     });
     const info = JSON.parse(response.choices[0].message.content ?? "{}");
-    if (info.averagePlaytimeMain != null) {
-      updateGame(id, {
-        averagePlaytimeMain: info.averagePlaytimeMain,
-        averagePlaytimeComplete: info.averagePlaytimeComplete ?? null,
-      });
-      return NextResponse.json({ hltbId: null, hltbMain: info.averagePlaytimeMain, hltbComplete: info.averagePlaytimeComplete ?? null });
-    }
-  } catch { /* ignore */ }
+    return {
+      hltbId: null,
+      hltbMain: info.averagePlaytimeMain ?? null,
+      hltbComplete: info.averagePlaytimeComplete ?? null,
+    };
+  } catch { return { hltbId: null, hltbMain: null, hltbComplete: null }; }
+}
 
-  return NextResponse.json({ hltbId: null, hltbMain: null, hltbComplete: null });
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const game = getGame(id);
+  if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Already have confirmed HLTB data
+  if (game.averagePlaytimeMain != null) {
+    return NextResponse.json({
+      hltbId: game.hltbGameId ?? null,
+      hltbMain: game.averagePlaytimeMain,
+      hltbComplete: game.averagePlaytimeComplete ?? null,
+    });
+  }
+
+  // Search HLTB
+  const candidates = await searchHLTB(game.title, game.platform);
+
+  if (candidates.length > 0) {
+    const titleLower = game.title.toLowerCase();
+    const exact = candidates.find(c => c.title.toLowerCase() === titleLower);
+
+    if (exact) {
+      // Exact match — save and return
+      updateGame(id, {
+        averagePlaytimeMain: exact.hltbMain,
+        averagePlaytimeComplete: exact.hltbComplete ?? null,
+        hltbGameId: exact.hltbId,
+      });
+      return NextResponse.json({ hltbId: exact.hltbId, hltbMain: exact.hltbMain, hltbComplete: exact.hltbComplete });
+    }
+
+    // No exact match — return candidates for user to pick
+    return NextResponse.json({ candidates });
+  }
+
+  // HLTB blocked — fall back to OpenAI
+  const result = await fallbackOpenAI(game.title, game.platform);
+  if (result.hltbMain != null) {
+    updateGame(id, {
+      averagePlaytimeMain: result.hltbMain,
+      averagePlaytimeComplete: result.hltbComplete ?? null,
+    });
+  }
+  return NextResponse.json(result);
+}
+
+// User confirmed a candidate selection
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const game = getGame(id);
+  if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const { hltbId } = await req.json();
+  if (!hltbId) return NextResponse.json({ error: "Missing hltbId" }, { status: 400 });
+
+  // Find the confirmed candidate's data from a fresh search
+  const candidates = await searchHLTB(game.title, game.platform);
+  const pick = candidates.find(c => c.hltbId === hltbId);
+
+  const hltbMain = pick?.hltbMain ?? null;
+  const hltbComplete = pick?.hltbComplete ?? null;
+
+  updateGame(id, {
+    averagePlaytimeMain: hltbMain,
+    averagePlaytimeComplete: hltbComplete,
+    hltbGameId: hltbId,
+  });
+
+  return NextResponse.json({ hltbId, hltbMain, hltbComplete });
 }

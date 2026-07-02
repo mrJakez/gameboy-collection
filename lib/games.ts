@@ -25,6 +25,7 @@ export interface Game {
   createdAt: string | null;
   averagePlaytimeMain: number | null;
   averagePlaytimeComplete: number | null;
+  hltbGameId?: number | null;
 }
 
 export function formatPlaytime(minutes: number): string {

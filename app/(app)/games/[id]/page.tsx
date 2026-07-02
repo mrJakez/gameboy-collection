@@ -155,16 +155,40 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [form, setForm] = useState<Partial<Game>>({});
   const [hltb, setHltb] = useState<{ hltbId: number | null; hltbMain: number | null; hltbComplete: number | null } | null>(null);
   const [hltbLoading, setHltbLoading] = useState(true);
+  const [hltbCandidates, setHltbCandidates] = useState<{ hltbId: number; title: string; hltbMain: number | null; hltbComplete: number | null }[] | null>(null);
 
   // Auto-fetch HLTB data on mount — independent of AI info
   useEffect(() => {
     setHltbLoading(true);
+    setHltbCandidates(null);
     fetch(`/api/games/${id}/hltb`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setHltb(data); })
+      .then(data => {
+        if (!data) return;
+        if (data.candidates) {
+          setHltbCandidates(data.candidates);
+        } else {
+          setHltb(data);
+        }
+      })
       .catch(() => {})
       .finally(() => setHltbLoading(false));
   }, [id]);
+
+  async function confirmHltbCandidate(hltbId: number) {
+    setHltbLoading(true);
+    setHltbCandidates(null);
+    try {
+      const res = await fetch(`/api/games/${id}/hltb`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hltbId }),
+      });
+      if (res.ok) setHltb(await res.json());
+    } finally {
+      setHltbLoading(false);
+    }
+  }
 
   async function toggleHighlight(filename: string, highlight: boolean) {
     await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
@@ -704,8 +728,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             );
           })()}
 
-          {/* Playtime Progress — auto-loaded from HLTB cache */}
-          {(game.playtime ?? 0) > 0 && (hltbLoading || hltb?.hltbMain != null) && (
+          {/* Playtime Progress — auto-loaded from HLTB */}
+          {(game.playtime ?? 0) > 0 && (hltbLoading || hltb?.hltbMain != null || hltbCandidates != null) && (
             <div className="mb-8">
               <h2 className="text-sm font-semibold text-zinc-300 mb-2">Playtime Progress</h2>
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 space-y-2">
@@ -718,6 +742,31 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                     <div className="h-2 bg-zinc-800 rounded-full animate-pulse" />
                     <div className="h-2.5 w-32 bg-zinc-800 rounded animate-pulse" />
                   </>
+                ) : hltbCandidates ? (
+                  <div>
+                    <p className="text-xs text-zinc-400 mb-2">Multiple matches found on HowLongToBeat — please select the correct one:</p>
+                    <div className="space-y-1">
+                      {hltbCandidates.map(c => (
+                        <button
+                          key={c.hltbId}
+                          onClick={() => confirmHltbCandidate(c.hltbId)}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-left transition-colors"
+                        >
+                          <span className="text-xs text-zinc-200">{c.title}</span>
+                          <span className="text-[10px] text-zinc-500 shrink-0 ml-2">
+                            {c.hltbMain != null ? `~${c.hltbMain}h` : "—"}
+                            {c.hltbComplete != null ? ` · ${c.hltbComplete}h 100%` : ""}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setHltbCandidates(null)}
+                      className="mt-2 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                    >
+                      Skip
+                    </button>
+                  </div>
                 ) : (() => {
                   const avgMins = hltb!.hltbMain! * 60;
                   const actualMins = game.playtime ?? 0;
@@ -751,7 +800,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                       <div className="flex justify-between items-baseline text-[10px] text-zinc-600">
                         <span>⏱ Avg ~{hltb!.hltbMain}h main{hltb!.hltbComplete != null ? ` · ~${hltb!.hltbComplete}h 100%` : ""}</span>
                         <a
-                          href={hltb!.hltbId ? `https://howlongtobeat.com/game/${hltb!.hltbId}` : `https://howlongtobeat.com/?q=${encodeURIComponent(game.title)}`}
+                          href={`https://howlongtobeat.com/game/${hltb!.hltbId}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-zinc-600 hover:text-zinc-400 transition-colors"
