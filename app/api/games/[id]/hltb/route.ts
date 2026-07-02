@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getGame, updateGame } from "@/lib/db";
 
 export interface HLTBData {
@@ -87,32 +86,6 @@ async function searchHLTB(title: string, platform: string): Promise<HLTBCandidat
   } catch { return []; }
 }
 
-async function fallbackOpenAI(title: string, platform: string): Promise<HLTBData> {
-  try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `You are a video game database. Return a JSON object with average playtime for the requested Game Boy game.
-Fields:
-- averagePlaytimeMain: number or null (average hours to beat the main story, as a decimal like 6.5)
-- averagePlaytimeComplete: number or null (average hours for 100% completion)
-Be accurate. Return null if you don't know.`,
-        },
-        { role: "user", content: `Game: "${title}" (${platform})` },
-      ],
-    });
-    const info = JSON.parse(response.choices[0].message.content ?? "{}");
-    return {
-      hltbId: null,
-      hltbMain: info.averagePlaytimeMain ?? null,
-      hltbComplete: info.averagePlaytimeComplete ?? null,
-    };
-  } catch { return { hltbId: null, hltbMain: null, hltbComplete: null }; }
-}
 
 export async function GET(
   req: NextRequest,
@@ -122,16 +95,16 @@ export async function GET(
   const game = getGame(id);
   if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Already have confirmed HLTB data
-  if (game.averagePlaytimeMain != null) {
+  // Already have confirmed HLTB game ID — return immediately
+  if (game.hltbGameId != null && game.averagePlaytimeMain != null) {
     return NextResponse.json({
-      hltbId: game.hltbGameId ?? null,
+      hltbId: game.hltbGameId,
       hltbMain: game.averagePlaytimeMain,
       hltbComplete: game.averagePlaytimeComplete ?? null,
     });
   }
 
-  // Search HLTB
+  // Search HLTB (also runs when we have playtime from AI but no hltbGameId yet)
   const candidates = await searchHLTB(game.title, game.platform);
 
   if (candidates.length > 0) {
@@ -152,15 +125,11 @@ export async function GET(
     return NextResponse.json({ candidates });
   }
 
-  // HLTB blocked — fall back to OpenAI
-  const result = await fallbackOpenAI(game.title, game.platform);
-  if (result.hltbMain != null) {
-    updateGame(id, {
-      averagePlaytimeMain: result.hltbMain,
-      averagePlaytimeComplete: result.hltbComplete ?? null,
-    });
+  // HLTB blocked — return existing data if available, otherwise nothing
+  if (game.averagePlaytimeMain != null) {
+    return NextResponse.json({ hltbId: null, hltbMain: game.averagePlaytimeMain, hltbComplete: game.averagePlaytimeComplete ?? null });
   }
-  return NextResponse.json(result);
+  return NextResponse.json({ hltbId: null, hltbMain: null, hltbComplete: null });
 }
 
 // User confirmed a candidate selection

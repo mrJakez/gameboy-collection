@@ -156,6 +156,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
   const [hltb, setHltb] = useState<{ hltbId: number | null; hltbMain: number | null; hltbComplete: number | null } | null>(null);
   const [hltbLoading, setHltbLoading] = useState(true);
   const [hltbCandidates, setHltbCandidates] = useState<{ hltbId: number; title: string; hltbMain: number | null; hltbComplete: number | null }[] | null>(null);
+  const [hltbLinkEditing, setHltbLinkEditing] = useState(false);
+  const [hltbLinkInput, setHltbLinkInput] = useState("");
 
   // Auto-fetch HLTB data on mount — independent of AI info
   useEffect(() => {
@@ -188,6 +190,15 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     } finally {
       setHltbLoading(false);
     }
+  }
+
+  async function saveHltbLink() {
+    const m = hltbLinkInput.match(/howlongtobeat\.com\/game\/(\d+)/);
+    if (!m) return;
+    const hltbId = parseInt(m[1], 10);
+    setHltbLinkEditing(false);
+    setHltbLinkInput("");
+    await confirmHltbCandidate(hltbId);
   }
 
   async function toggleHighlight(filename: string, highlight: boolean) {
@@ -729,7 +740,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           })()}
 
           {/* Playtime Progress — auto-loaded from HLTB */}
-          {(game.playtime ?? 0) > 0 && (hltbLoading || hltb?.hltbMain != null || hltbCandidates != null) && (
+          {(hltbLoading || hltb?.hltbMain != null || hltbCandidates != null) && (
             <div className="mb-8">
               <h2 className="text-sm font-semibold text-zinc-300 mb-2">Playtime Progress</h2>
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 space-y-2">
@@ -768,8 +779,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                     </button>
                   </div>
                 ) : (() => {
-                  const avgMins = hltb!.hltbMain! * 60;
                   const actualMins = game.playtime ?? 0;
+                  const hasPlaytime = actualMins > 0;
+                  const avgMins = hltb!.hltbMain! * 60;
                   const completed = game.status === "completed";
                   const playing = game.status === "playing";
                   const pct = Math.min(actualMins / avgMins, 1);
@@ -781,32 +793,64 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                   const labelColor = completed ? "text-blue-400" : playing ? "text-green-400" : "text-zinc-300";
                   return (
                     <>
-                      <div className="flex justify-between items-baseline text-xs">
-                        <span className={`${labelColor} font-medium`}>
-                          {completed ? "🎉 Completed" : `${playedH}h played`}
-                        </span>
-                        <span className="text-zinc-500">
-                          {completed
-                            ? faster ? `${diffH}h faster than avg` : `${diffH}h longer than avg`
-                            : `~${diffH}h left`}
-                        </span>
-                      </div>
-                      <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-                          style={{ width: `${Math.round(pct * 100)}%` }}
-                        />
-                      </div>
+                      {hasPlaytime && (
+                        <>
+                          <div className="flex justify-between items-baseline text-xs">
+                            <span className={`${labelColor} font-medium`}>
+                              {completed ? "🎉 Completed" : `${playedH}h played`}
+                            </span>
+                            <span className="text-zinc-500">
+                              {completed
+                                ? faster ? `${diffH}h faster than avg` : `${diffH}h longer than avg`
+                                : `~${diffH}h left`}
+                            </span>
+                          </div>
+                          <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                              style={{ width: `${Math.round(pct * 100)}%` }}
+                            />
+                          </div>
+                        </>
+                      )}
                       <div className="flex justify-between items-baseline text-[10px] text-zinc-600">
                         <span>⏱ Avg ~{hltb!.hltbMain}h main{hltb!.hltbComplete != null ? ` · ~${hltb!.hltbComplete}h 100%` : ""}</span>
-                        <a
-                          href={`https://howlongtobeat.com/game/${hltb!.hltbId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-zinc-600 hover:text-zinc-400 transition-colors"
-                        >
-                          HowLongToBeat ↗
-                        </a>
+                        <div className="flex items-center gap-1.5">
+                          {hltbLinkEditing ? (
+                            <>
+                              <input
+                                autoFocus
+                                value={hltbLinkInput}
+                                onChange={e => setHltbLinkInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") saveHltbLink(); if (e.key === "Escape") { setHltbLinkEditing(false); setHltbLinkInput(""); } }}
+                                placeholder="https://howlongtobeat.com/game/1250"
+                                className="text-[10px] bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-zinc-300 w-56 outline-none focus:border-zinc-500"
+                              />
+                              <button onClick={saveHltbLink} className="text-zinc-400 hover:text-zinc-200">✓</button>
+                              <button onClick={() => { setHltbLinkEditing(false); setHltbLinkInput(""); }} className="text-zinc-600 hover:text-zinc-400">✕</button>
+                            </>
+                          ) : (
+                            <>
+                              <a
+                                href={hltb!.hltbId ? `https://howlongtobeat.com/game/${hltb!.hltbId}` : `https://howlongtobeat.com/?q=${encodeURIComponent(game.title)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-zinc-600 hover:text-zinc-400 transition-colors"
+                              >
+                                HowLongToBeat ↗
+                              </a>
+                              {!hltb!.hltbId && (
+                                <button
+                                  onClick={() => setHltbLinkEditing(true)}
+                                  className="text-zinc-700 hover:text-zinc-400 transition-colors"
+                                  title="Set HLTB game link"
+                                >
+                                  ✎
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </>
                   );

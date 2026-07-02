@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
 import { isAuthenticated } from "@/app/api/auth/route";
-import { getGame, updateGame } from "@/lib/db";
 
 const CACHE_FILE = path.join(process.cwd(), "data", "ai-cache.json");
 
@@ -237,17 +236,6 @@ Be accurate. If you don't know a value, return null or empty string.`,
   const result: AiInfo = { ...info, screenshots, reviewScores, cachedAt: new Date().toISOString() };
   cache[id] = result;
   writeCache(cache);
-
-  // Store playtime estimates in game record if not already set
-  if (result.averagePlaytimeMain != null) {
-    const game = getGame(id);
-    if (game && game.averagePlaytimeMain == null) {
-      updateGame(id, {
-        averagePlaytimeMain: result.averagePlaytimeMain,
-        averagePlaytimeComplete: result.averagePlaytimeComplete ?? null,
-      });
-    }
-  }
 
   return NextResponse.json(result);
 }
