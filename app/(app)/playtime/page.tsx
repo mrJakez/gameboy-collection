@@ -6,16 +6,12 @@ import { Game, STATUS_COLORS, STATUS_LABELS, PLATFORM_COLORS, formatPlaytime } f
 
 type SortKey = "playtime" | "title" | "platform";
 
-function BarChart({ value, max }: { value: number; max: number }) {
-  const pct = max > 0 ? (value / max) * 100 : 0;
-  return (
-    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-      <div
-        className="h-full bg-zinc-500 rounded-full transition-all"
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  );
+function fmtMins(m: number): string {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  if (h === 0) return `${min}m`;
+  if (min === 0) return `${h}h`;
+  return `${h}h ${min}m`;
 }
 
 function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: number; rank: number }) {
@@ -23,6 +19,14 @@ function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: num
   const coverSrc = rawSrc?.includes("/images/cartridges/") ? `${rawSrc}?thumb=1` : rawSrc;
   const platformColor = PLATFORM_COLORS[game.platform];
   const statusColor = STATUS_COLORS[game.status];
+
+  const hasHltb = game.hltbPlaytimeMain != null;
+  const actualMins = game.playtime;
+  const avgMins = hasHltb ? Math.round(game.hltbPlaytimeMain! * 60) : 0;
+  const completed = game.status === "completed";
+  const playing = game.status === "playing";
+  const pct = hasHltb ? Math.min(actualMins / avgMins, 1) : actualMins / Math.max(maxPlaytime, 1);
+  const barColor = !hasHltb ? "bg-zinc-600" : completed ? "bg-blue-500" : playing ? "bg-green-500" : "bg-zinc-500";
 
   return (
     <a href={`/games/${game.id}?from=playtime`} className="group flex items-center gap-4 px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60 transition-all">
@@ -48,12 +52,18 @@ function PlaytimeRow({ game, maxPlaytime, rank }: { game: Game; maxPlaytime: num
       </div>
 
       {/* Bar + time */}
-      <div className="flex items-center gap-3 shrink-0 sm:w-48">
-        <div className="hidden sm:block flex-1">
-          <BarChart value={game.playtime} max={maxPlaytime} />
+      <div className="hidden sm:flex flex-col gap-1 shrink-0 w-48">
+        <div className="flex justify-between items-baseline text-[10px] text-zinc-500">
+          <span>{fmtMins(actualMins)}</span>
+          {hasHltb && <span className="text-zinc-600">~{fmtMins(avgMins)} avg</span>}
         </div>
-        <span className="text-sm font-mono text-zinc-300 w-14 text-right">{formatPlaytime(game.playtime)}</span>
+        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.round(pct * 100)}%` }} />
+        </div>
       </div>
+
+      {/* Mobile time */}
+      <span className="sm:hidden text-sm font-mono text-zinc-300 shrink-0">{formatPlaytime(game.playtime)}</span>
     </a>
   );
 }
@@ -77,6 +87,38 @@ function TotalStats({ games }: { games: Game[] }) {
           <div className="text-xs text-zinc-500 mt-0.5">{s.label}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function Legend() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-4 h-4 rounded-full border border-zinc-600 hover:border-zinc-400 text-zinc-500 hover:text-zinc-300 transition-colors text-[10px] font-bold flex items-center justify-center"
+        title="Legend"
+      >
+        ?
+      </button>
+      {open && (
+        <div className="absolute right-0 top-6 z-10 w-64 bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-xl text-xs text-zinc-400 space-y-2">
+          <p className="font-semibold text-zinc-200 mb-1">Progress bar</p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-1.5 rounded-full bg-green-500 shrink-0" />
+            <span>Currently playing — bar shows progress vs. HowLongToBeat average</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-1.5 rounded-full bg-blue-500 shrink-0" />
+            <span>Completed — bar shows how far you got vs. HowLongToBeat average</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-1.5 rounded-full bg-zinc-600 shrink-0" />
+            <span>No HowLongToBeat data — bar shows time relative to longest played game</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -143,9 +185,12 @@ export default function PlaytimePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-zinc-100">Play Time</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">All titles sorted by time on the Analogue Pocket</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-zinc-500">All titles sorted by time on the Analogue Pocket</p>
+            <Legend />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Collection</a>
         </div>
       </div>

@@ -708,37 +708,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          {/* Pocket Screenshots */}
-          {(() => {
-            const gameScreenshots = screenshots.filter(s => s.gameId === id);
-            if (gameScreenshots.length === 0) return null;
-            return (
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-semibold text-zinc-300">Pocket Screenshots</h2>
-                  <span className="text-[10px] text-zinc-600">{gameScreenshots.length} image{gameScreenshots.length !== 1 ? "s" : ""}</span>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                  {gameScreenshots.map(s => (
-                    <div
-                      key={s.filename}
-                      onClick={() => setLightboxImg(s.filename)}
-                      className="aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-600 cursor-pointer transition-all"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`/api/screenshots/${encodeURIComponent(s.filename)}`}
-                        alt={s.filename}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
           {/* Playtime Progress — auto-loaded from HLTB */}
           <div className="mb-8">
               <h2 className="text-sm font-semibold text-zinc-300 mb-2">Playtime Progress</h2>
@@ -806,36 +775,43 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                   const completed = game.status === "completed";
                   const playing = game.status === "playing";
                   const pct = Math.min(actualMins / avgMins, 1);
-                  const playedH = (actualMins / 60).toFixed(1);
                   const diffMins = Math.abs(avgMins - actualMins);
-                  const diffH = (diffMins / 60).toFixed(1);
                   const faster = actualMins < avgMins;
                   const barColor = completed ? "bg-blue-500" : playing ? "bg-green-500" : "bg-zinc-500";
                   const labelColor = completed ? "text-blue-400" : playing ? "text-green-400" : "text-zinc-300";
+                  const fmtMins = (m: number) => {
+                    const h = Math.floor(m / 60);
+                    const min = m % 60;
+                    if (h === 0) return `${min}m`;
+                    if (min === 0) return `${h}h`;
+                    return `${h}h ${min}m`;
+                  };
+                  const fmtHltb = (h: number) => {
+                    const totalMins = Math.round(h * 60);
+                    return fmtMins(totalMins);
+                  };
                   return (
                     <>
-                      {hasPlaytime && (
-                        <>
-                          <div className="flex justify-between items-baseline text-xs">
-                            <span className={`${labelColor} font-medium`}>
-                              {completed ? "🎉 Completed" : `${playedH}h played`}
-                            </span>
-                            <span className="text-zinc-500">
-                              {completed
-                                ? faster ? `${diffH}h faster than avg` : `${diffH}h longer than avg`
-                                : `~${diffH}h left`}
-                            </span>
-                          </div>
-                          <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-                              style={{ width: `${Math.round(pct * 100)}%` }}
-                            />
-                          </div>
-                        </>
-                      )}
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className={`${hasPlaytime ? labelColor : "text-zinc-500"} font-medium`}>
+                          {completed ? "🎉 Completed" : hasPlaytime ? `${fmtMins(actualMins)} played` : "Not started yet"}
+                        </span>
+                        {hasPlaytime && (
+                          <span className="text-zinc-500">
+                            {completed
+                              ? faster ? `${fmtMins(diffMins)} faster than avg` : `${fmtMins(diffMins)} longer than avg`
+                              : `~${fmtMins(diffMins)} left`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${hasPlaytime ? barColor : ""}`}
+                          style={{ width: `${Math.round(pct * 100)}%` }}
+                        />
+                      </div>
                       <div className="flex justify-between items-baseline text-[10px] text-zinc-600">
-                        <span>⏱ Avg ~{hltb!.hltbMain}h main{hltb!.hltbComplete != null ? ` · ~${hltb!.hltbComplete}h 100%` : ""}</span>
+                        <span>⏱ {hasPlaytime ? `${fmtMins(actualMins)} played · ` : ""}Avg ~{fmtHltb(hltb!.hltbMain!)} main{hltb!.hltbComplete != null ? ` · ~${fmtHltb(hltb!.hltbComplete)} 100%` : ""}</span>
                         <div className="flex items-center gap-1.5">
                           {hltbLinkEditing ? (
                             <>
@@ -878,6 +854,37 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 })()}
               </div>
             </div>
+
+          {/* Pocket Screenshots */}
+          {(() => {
+            const gameScreenshots = screenshots.filter(s => s.gameId === id);
+            if (gameScreenshots.length === 0) return null;
+            return (
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-semibold text-zinc-300">Pocket Screenshots</h2>
+                  <span className="text-[10px] text-zinc-600">{gameScreenshots.length} image{gameScreenshots.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                  {gameScreenshots.map(s => (
+                    <div
+                      key={s.filename}
+                      onClick={() => setLightboxImg(s.filename)}
+                      className="aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-600 cursor-pointer transition-all"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/screenshots/${encodeURIComponent(s.filename)}`}
+                        alt={s.filename}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* AI Info */}
           <AiSection
