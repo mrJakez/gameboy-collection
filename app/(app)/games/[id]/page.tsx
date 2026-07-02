@@ -220,6 +220,16 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
     setLightboxImg(null);
   }
 
+  async function unassignScreenshot(filename: string) {
+    await fetch(`/api/screenshots/${encodeURIComponent(filename)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId: null }),
+    });
+    setScreenshots(prev => prev.filter(s => s.filename !== filename));
+    setLightboxImg(null);
+  }
+
   const checkAuth = useCallback(async () => {
     const r = await fetch("/api/auth");
     const d = await r.json();
@@ -944,6 +954,13 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                       title={s.highlight ? "Remove from favorites" : "Mark as favorite"}
                     >
                       <StarIcon filled={s.highlight} />
+                    </button>
+                    <button
+                      onClick={() => unassignScreenshot(s.filename)}
+                      className="px-3 py-4 sm:p-2 text-zinc-600 hover:text-zinc-300 transition-colors"
+                      title="Remove from this game"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/><circle cx="12" cy="12" r="10"/></svg>
                     </button>
                     <button
                       onClick={() => deleteScreenshot(s.filename)}
