@@ -20,9 +20,18 @@ let migrationDone = false;
 
 function migrateGames(games: Game[]): Game[] {
   let dirty = false;
-  const migrated = games.map((g: Game & { lastPlayed?: string | null; firstPlayed?: string | null; sessions?: number; developer?: string; publisher?: string; genre?: string[] }) => {
-    const { lastPlayed, firstPlayed, sessions, developer, publisher, genre, ...rest } = g;
+  const migrated = games.map((g: Game & { lastPlayed?: string | null; firstPlayed?: string | null; sessions?: number; developer?: string; publisher?: string; genre?: string[]; averagePlaytimeMain?: number | null; averagePlaytimeComplete?: number | null }) => {
+    const { lastPlayed, firstPlayed, sessions, developer, publisher, genre, averagePlaytimeMain, averagePlaytimeComplete, ...rest } = g;
     if (developer !== undefined || publisher !== undefined || genre !== undefined) dirty = true;
+    // Migrate renamed HLTB fields: averagePlaytime* → hltbPlaytime*
+    if (averagePlaytimeMain !== undefined) {
+      if (rest.hltbPlaytimeMain == null) rest.hltbPlaytimeMain = averagePlaytimeMain ?? null;
+      dirty = true;
+    }
+    if (averagePlaytimeComplete !== undefined) {
+      if (rest.hltbPlaytimeComplete == null) rest.hltbPlaytimeComplete = averagePlaytimeComplete ?? null;
+      dirty = true;
+    }
     if (!rest.createdAt && lastPlayed) {
       rest.createdAt = lastPlayed;
       dirty = true;

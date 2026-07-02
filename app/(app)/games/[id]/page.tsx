@@ -740,11 +740,32 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
           })()}
 
           {/* Playtime Progress — auto-loaded from HLTB */}
-          {(hltbLoading || hltb?.hltbMain != null || hltbCandidates != null) && (
-            <div className="mb-8">
+          <div className="mb-8">
               <h2 className="text-sm font-semibold text-zinc-300 mb-2">Playtime Progress</h2>
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 space-y-2">
-                {hltbLoading ? (
+                {!hltbLoading && (!hltb || hltb.hltbMain == null) && !hltbCandidates ? (
+                  <div className="flex items-center justify-between text-[10px] text-zinc-600">
+                    <span>No HowLongToBeat data found</span>
+                    {hltbLinkEditing ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={hltbLinkInput}
+                          onChange={e => setHltbLinkInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") saveHltbLink(); if (e.key === "Escape") { setHltbLinkEditing(false); setHltbLinkInput(""); } }}
+                          placeholder="https://howlongtobeat.com/game/1250"
+                          className="text-[10px] bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-zinc-300 w-56 outline-none focus:border-zinc-500"
+                        />
+                        <button onClick={saveHltbLink} className="text-zinc-400 hover:text-zinc-200">✓</button>
+                        <button onClick={() => { setHltbLinkEditing(false); setHltbLinkInput(""); }} className="text-zinc-600 hover:text-zinc-400">✕</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setHltbLinkEditing(true)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
+                        Link HowLongToBeat ✎
+                      </button>
+                    )}
+                  </div>
+                ) : hltbLoading ? (
                   <>
                     <div className="flex justify-between">
                       <div className="h-3 w-24 bg-zinc-800 rounded animate-pulse" />
@@ -857,7 +878,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                 })()}
               </div>
             </div>
-          )}
 
           {/* AI Info */}
           <AiSection

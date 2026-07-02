@@ -19,31 +19,24 @@ const HLTB_PLATFORM: Record<string, string> = {
   GB: "Game Boy", GBC: "Game Boy Color", GBA: "Game Boy Advance", GBP: "Game Boy",
 };
 
-let hltbHashCache: string | null = null;
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-async function getHLTBHash(): Promise<string | null> {
-  if (hltbHashCache) return hltbHashCache;
+async function getSearchToken(): Promise<{ token: string; hpKey: string; hpVal: string } | null> {
   try {
-    const ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
-    const html = await fetch("https://howlongtobeat.com", { headers: { "User-Agent": ua } }).then(r => r.text());
-    const bundles = [...html.matchAll(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g)].map(m => m[1]);
-    for (const src of bundles) {
-      const js = await fetch(`https://howlongtobeat.com${src}`, { headers: { "User-Agent": ua } }).then(r => r.text());
-      const m = js.match(/"\/api\/search\/([a-zA-Z0-9]+)"/);
-      if (m) { hltbHashCache = m[1]; return hltbHashCache; }
-    }
-  } catch { /* ignore */ }
-  return null;
+    const res = await fetch(`https://howlongtobeat.com/api/bleed/init?t=${Date.now()}`, {
+      headers: { "User-Agent": UA, "Referer": "https://howlongtobeat.com/" },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
 }
 
 async function searchHLTB(title: string, platform: string): Promise<HLTBCandidate[]> {
   try {
-    const hash = await getHLTBHash();
-    const url = hash
-      ? `https://howlongtobeat.com/api/search/${hash}`
-      : "https://howlongtobeat.com/api/search";
+    const auth = await getSearchToken();
+    if (!auth) return [];
 
-    const body = {
+    const body: Record<string, unknown> = {
       searchType: "games",
       searchTerms: title.split(/\s+/),
       searchPage: 1,
@@ -60,14 +53,19 @@ async function searchHLTB(title: string, platform: string): Promise<HLTBCandidat
         lists: { sortCategory: "follows" },
         filter: "", sort: 0, randomizer: 0,
       },
+      useCache: true,
+      [auth.hpKey]: auth.hpVal,
     };
 
-    const res = await fetch(url, {
+    const res = await fetch("https://howlongtobeat.com/api/bleed", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "User-Agent": UA,
         "Referer": "https://howlongtobeat.com/",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "x-auth-token": auth.token,
+        "x-hp-key": auth.hpKey,
+        "x-hp-val": auth.hpVal,
       },
       body: JSON.stringify(body),
     });
@@ -86,6 +84,26 @@ async function searchHLTB(title: string, platform: string): Promise<HLTBCandidat
   } catch { return []; }
 }
 
+async function fetchGameDetailPage(hltbId: number): Promise<{ hltbMain: number | null; hltbComplete: number | null }> {
+  const empty = { hltbMain: null, hltbComplete: null };
+  try {
+    const html = await fetch(`https://howlongtobeat.com/game/${hltbId}`, {
+      headers: { "User-Agent": UA, "Accept": "text/html" },
+    }).then(r => r.text());
+
+    const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (!m) return empty;
+
+    const data = JSON.parse(m[1]);
+    const game = data.props?.pageProps?.game?.data?.game?.[0];
+    if (!game) return empty;
+
+    return {
+      hltbMain: game.comp_main ? Math.round(game.comp_main / 360) / 10 : null,
+      hltbComplete: game.comp_100 ? Math.round(game.comp_100 / 360) / 10 : null,
+    };
+  } catch { return empty; }
+}
 
 export async function GET(
   req: NextRequest,
@@ -104,7 +122,7 @@ export async function GET(
     });
   }
 
-  // Search HLTB (also runs when we have playtime from AI but no hltbGameId yet)
+  // Search HLTB
   const candidates = await searchHLTB(game.title, game.platform);
 
   if (candidates.length > 0) {
@@ -125,14 +143,14 @@ export async function GET(
     return NextResponse.json({ candidates });
   }
 
-  // HLTB blocked — return existing data if available, otherwise nothing
+  // Search failed — return existing data if available
   if (game.hltbPlaytimeMain != null) {
     return NextResponse.json({ hltbId: null, hltbMain: game.hltbPlaytimeMain, hltbComplete: game.hltbPlaytimeComplete ?? null });
   }
   return NextResponse.json({ hltbId: null, hltbMain: null, hltbComplete: null });
 }
 
-// User confirmed a candidate selection
+// User confirmed game ID (via candidate pick or manual URL entry)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -144,12 +162,8 @@ export async function POST(
   const { hltbId } = await req.json();
   if (!hltbId) return NextResponse.json({ error: "Missing hltbId" }, { status: 400 });
 
-  // Find the confirmed candidate's data from a fresh search
-  const candidates = await searchHLTB(game.title, game.platform);
-  const pick = candidates.find(c => c.hltbId === hltbId);
-
-  const hltbMain = pick?.hltbMain ?? null;
-  const hltbComplete = pick?.hltbComplete ?? null;
+  // Fetch playtime from game detail page (works even when search API is blocked)
+  const { hltbMain, hltbComplete } = await fetchGameDetailPage(hltbId);
 
   updateGame(id, {
     hltbPlaytimeMain: hltbMain,
