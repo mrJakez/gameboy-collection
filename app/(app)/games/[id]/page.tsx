@@ -970,8 +970,8 @@ interface AiInfo {
   releaseYear: number | null;
   metacriticScore: number | null;
   userScore: number | null;
-  averagePlaytimeMain: number | null;
-  averagePlaytimeComplete: number | null;
+  hltbPlaytimeMain: number | null;
+  hltbPlaytimeComplete: number | null;
   youtubeQuery: string;
   mobySlug: string;
   screenshots: string[];
@@ -1154,12 +1154,12 @@ function AiSection({ gameId, title, platform, gameYear, onYearAdopted, authentic
             {info.developer && <span><span className="text-zinc-600">Dev</span> {info.developer}</span>}
             {info.publisher && <span><span className="text-zinc-600">Pub</span> {info.publisher}</span>}
             {info.genre && <span><span className="text-zinc-600">Genre</span> {info.genre}</span>}
-            {(info.averagePlaytimeMain != null || info.averagePlaytimeComplete != null) && (
+            {(info.hltbPlaytimeMain != null || info.hltbPlaytimeComplete != null) && (
               <span>
                 <span className="text-zinc-600">⏱ Avg</span>{" "}
-                {info.averagePlaytimeMain != null && `${info.averagePlaytimeMain}h`}
-                {info.averagePlaytimeMain != null && info.averagePlaytimeComplete != null && " · "}
-                {info.averagePlaytimeComplete != null && <span className="text-zinc-600">{info.averagePlaytimeComplete}h 100%</span>}
+                {info.hltbPlaytimeMain != null && `${info.hltbPlaytimeMain}h`}
+                {info.hltbPlaytimeMain != null && info.hltbPlaytimeComplete != null && " · "}
+                {info.hltbPlaytimeComplete != null && <span className="text-zinc-600">{info.hltbPlaytimeComplete}h 100%</span>}
               </span>
             )}
             {info.releaseYear && (

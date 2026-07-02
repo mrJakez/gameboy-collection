@@ -96,11 +96,11 @@ export async function GET(
   if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Already have confirmed HLTB game ID — return immediately
-  if (game.hltbGameId != null && game.averagePlaytimeMain != null) {
+  if (game.hltbGameId != null && game.hltbPlaytimeMain != null) {
     return NextResponse.json({
       hltbId: game.hltbGameId,
-      hltbMain: game.averagePlaytimeMain,
-      hltbComplete: game.averagePlaytimeComplete ?? null,
+      hltbMain: game.hltbPlaytimeMain,
+      hltbComplete: game.hltbPlaytimeComplete ?? null,
     });
   }
 
@@ -114,8 +114,8 @@ export async function GET(
     if (exact) {
       // Exact match — save and return
       updateGame(id, {
-        averagePlaytimeMain: exact.hltbMain,
-        averagePlaytimeComplete: exact.hltbComplete ?? null,
+        hltbPlaytimeMain: exact.hltbMain,
+        hltbPlaytimeComplete: exact.hltbComplete ?? null,
         hltbGameId: exact.hltbId,
       });
       return NextResponse.json({ hltbId: exact.hltbId, hltbMain: exact.hltbMain, hltbComplete: exact.hltbComplete });
@@ -126,8 +126,8 @@ export async function GET(
   }
 
   // HLTB blocked — return existing data if available, otherwise nothing
-  if (game.averagePlaytimeMain != null) {
-    return NextResponse.json({ hltbId: null, hltbMain: game.averagePlaytimeMain, hltbComplete: game.averagePlaytimeComplete ?? null });
+  if (game.hltbPlaytimeMain != null) {
+    return NextResponse.json({ hltbId: null, hltbMain: game.hltbPlaytimeMain, hltbComplete: game.hltbPlaytimeComplete ?? null });
   }
   return NextResponse.json({ hltbId: null, hltbMain: null, hltbComplete: null });
 }
@@ -152,8 +152,8 @@ export async function POST(
   const hltbComplete = pick?.hltbComplete ?? null;
 
   updateGame(id, {
-    averagePlaytimeMain: hltbMain,
-    averagePlaytimeComplete: hltbComplete,
+    hltbPlaytimeMain: hltbMain,
+    hltbPlaytimeComplete: hltbComplete,
     hltbGameId: hltbId,
   });
 

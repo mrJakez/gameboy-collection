@@ -23,8 +23,8 @@ export interface Game {
   pocketData: PocketData | null;
   purchasePrice: string | null;
   createdAt: string | null;
-  averagePlaytimeMain: number | null;
-  averagePlaytimeComplete: number | null;
+  hltbPlaytimeMain: number | null;
+  hltbPlaytimeComplete: number | null;
   hltbGameId?: number | null;
 }
 

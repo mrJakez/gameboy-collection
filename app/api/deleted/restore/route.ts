@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     pocketData: null,
     purchasePrice: null,
     createdAt: new Date().toISOString(),
-    averagePlaytimeMain: null,
-    averagePlaytimeComplete: null,
+    hltbPlaytimeMain: null,
+    hltbPlaytimeComplete: null,
   });
 
   logger.action("game.restore", { gameId: game.id, title: entry.title });
